@@ -1,2 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+*.asset linguist-detect=false
+*.meta linguist-detect=false
+*.mat linguist-detect=false
