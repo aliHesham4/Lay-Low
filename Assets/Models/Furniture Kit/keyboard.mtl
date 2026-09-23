@@ -1,0 +1,45 @@
+# MTL file - created by a modified js OBJExporter
+
+newmtl switch_bottom.008
+Tr 0.0000
+Tf 1.0000 1.0000 1.0000
+illum 1
+Pr 0.5
+Pds 1
+Pl 1
+Ka 1 1 1
+Kd 0.8 0.8 0.8
+Ke 0 0 0
+
+newmtl switch.010
+Tr 0.0000
+Tf 1.0000 1.0000 1.0000
+illum 1
+Pr 0.5
+Pds 1
+Pl 1
+Ka 1 1 1
+Kd 0.0985042 0.0985042 0.0985042
+Ke 0 0 0
+
+newmtl plate
+Tr 0.0000
+Tf 1.0000 1.0000 1.0000
+illum 1
+Pr 0.5
+Pds 1
+Pl 1
+Ka 1 1 1
+Kd 0.638273 0.638273 0.638273
+Ke 0 0 0
+
+newmtl keycaps.011
+Tr 0.0000
+Tf 1.0000 1.0000 1.0000
+illum 1
+Pr 0.5
+Pds 1
+Pl 1
+Ka 1 1 1
+Kd 0.303198 0.303198 0.303198
+Ke 0 0 0

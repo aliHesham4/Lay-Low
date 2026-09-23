@@ -5,8 +5,8 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Animator))]
 public class EnemyMovement : MonoBehaviour
 {
-    public float moveSpeed = 1.5f;
-    public float turnSpeed = 200f;
+    public float moveSpeed = 0.5f;
+    public float turnSpeed = 720f; // how fast the character snaps to face new direction
     public float gravity = -9.81f;
 
     private CharacterController controller;
@@ -30,12 +30,22 @@ public class EnemyMovement : MonoBehaviour
         if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) horizontal = 1f;
         if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) horizontal = -1f;
 
-        // Rotation
-        transform.Rotate(0f, horizontal * turnSpeed * Time.deltaTime, 0f);
+        // Build a world-space direction from input (top-down: X = left/right, Z = forward/back)
+        // Build a world-space direction from input (top-down: X = left/right, Z = forward/back)
+        Vector3 inputDir = new Vector3(-horizontal, 0f, -vertical);
 
-        // Forward/Backward movement
-        Vector3 move = transform.forward * vertical * moveSpeed;
-        controller.Move(move * Time.deltaTime);
+        if (inputDir.sqrMagnitude > 0.001f)
+        {
+            inputDir.Normalize();
+
+            // Rotate the character to face the direction it's moving
+            Quaternion targetRotation = Quaternion.LookRotation(inputDir, Vector3.up);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, turnSpeed * Time.deltaTime);
+
+            // Move in that world direction (not transform.forward, since we're not tank-turning)
+            Vector3 move = inputDir * moveSpeed;
+            controller.Move(move * Time.deltaTime);
+        }
 
         // Apply constant gravity
         if (controller.isGrounded && velocity.y < 0)
@@ -48,7 +58,7 @@ public class EnemyMovement : MonoBehaviour
         // Send speed to Animator (triggers walk animation)
         if (animator != null)
         {
-            animator.SetFloat("Speed", Mathf.Abs(vertical));
+            animator.SetFloat("Speed", inputDir.sqrMagnitude > 0.001f ? 1f : 0f);
         }
     }
 }
