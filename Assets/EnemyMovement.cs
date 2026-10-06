@@ -5,13 +5,17 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Animator))]
 public class EnemyMovement : MonoBehaviour
 {
-    public float moveSpeed = 0.5f;
-    public float turnSpeed = 720f; // how fast the character snaps to face new direction
+    [Header("Movement Settings")]
+    public float moveSpeed = 0.8f;
     public float gravity = -9.81f;
+
+    [Header("Turning")]
+    public float turnSpeed = 180f; // degrees per second while holding Left/Right
 
     private CharacterController controller;
     private Animator animator;
-    private Vector3 velocity;
+    private float verticalVelocity = 0f;
+    private bool isMoving = false;
 
     void Start()
     {
@@ -21,44 +25,39 @@ public class EnemyMovement : MonoBehaviour
 
     void Update()
     {
-        // Keyboard inputs
-        float vertical = 0f;
-        if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) vertical = 1f;
-        if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) vertical = -1f;
+        HandleMovement();
+    }
 
-        float horizontal = 0f;
-        if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) horizontal = 1f;
-        if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) horizontal = -1f;
+    void HandleMovement()
+    {
+        if (Keyboard.current == null) return;
 
-        // Build a world-space direction from input (top-down: X = left/right, Z = forward/back)
-        // Build a world-space direction from input (top-down: X = left/right, Z = forward/back)
-        Vector3 inputDir = new Vector3(-horizontal, 0f, -vertical);
+        bool upPressed = Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed;
+        bool downPressed = Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed;
+        bool rightPressed = Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed;
+        bool leftPressed = Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed;
 
-        if (inputDir.sqrMagnitude > 0.001f)
-        {
-            inputDir.Normalize();
+        // Left/Right ONLY rotate the character — held down, it keeps turning smoothly.
+        if (rightPressed) transform.Rotate(Vector3.up, turnSpeed * Time.deltaTime, Space.World);
+        if (leftPressed) transform.Rotate(Vector3.up, -turnSpeed * Time.deltaTime, Space.World);
 
-            // Rotate the character to face the direction it's moving
-            Quaternion targetRotation = Quaternion.LookRotation(inputDir, Vector3.up);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, turnSpeed * Time.deltaTime);
+        // Up/Down walk forward/backward in whatever direction the character is CURRENTLY facing.
+        float moveInput = 0f;
+        if (upPressed) moveInput += 1f;
+        if (downPressed) moveInput -= 1f;
 
-            // Move in that world direction (not transform.forward, since we're not tank-turning)
-            Vector3 move = inputDir * moveSpeed;
-            controller.Move(move * Time.deltaTime);
-        }
+        isMoving = Mathf.Abs(moveInput) > 0.01f;
 
-        // Apply constant gravity
-        if (controller.isGrounded && velocity.y < 0)
-        {
-            velocity.y = -2f; // Keeps character grounded firmly
-        }
-        velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+        Vector3 moveDirection = transform.forward * moveInput;
 
-        // Send speed to Animator (triggers walk animation)
+        if (controller.isGrounded && verticalVelocity < 0)
+            verticalVelocity = -2f;
+        verticalVelocity += gravity * Time.deltaTime;
+
+        Vector3 motion = (moveDirection * moveSpeed) + (Vector3.up * verticalVelocity);
+        controller.Move(motion * Time.deltaTime);
+
         if (animator != null)
-        {
-            animator.SetFloat("Speed", inputDir.sqrMagnitude > 0.001f ? 1f : 0f);
-        }
+            animator.SetFloat("Speed", isMoving ? 1f : 0f);
     }
 }
