@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 9d69c4b02d962604ea01fc22a10bcbea
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - playerHUD: {instanceID: 0}
+  - stonePrefab: {fileID: 919132149155446097, guid: 0911eda5a17a2f343b52ca441c107444, type: 3}
+  - handTransform: {instanceID: 0}
+  - animator: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
