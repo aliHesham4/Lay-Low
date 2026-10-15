@@ -19,6 +19,8 @@ public class Hider : MonoBehaviour
     private PlayerHealth health;
     private Animator animator;
 
+    private int originalLayer;
+
     void Awake()
     {
         movement = GetComponent<PlayerMovement>();
@@ -26,22 +28,46 @@ public class Hider : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         health = GetComponent<PlayerHealth>();
         animator = GetComponentInChildren<Animator>();
+
+        originalLayer = gameObject.layer;
     }
 
-    public void SetHidden(bool hidden)
+    public void SetHidden(bool hidden, bool hideRenderers = true)
     {
         if (IsHidden == hidden) return;
         IsHidden = hidden;
 
         if (hidden)
         {
-            foreach (Renderer r in GetComponentsInChildren<Renderer>())
+            // 1. FIX RUNNING IN WATER: Freeze the animation state completely
+            if (animator != null)
             {
-                if (r.enabled) { r.enabled = false; hiddenRenderers.Add(r); }
+                animator.SetFloat("Speed", 0f);
+                animator.speed = 0f; // Pauses motion on the current pose
+            }
+
+            // 2. FIX GETTING KILLED: Switch layer so Enemy vision raycasts ignore the player
+            gameObject.layer = LayerMask.NameToLayer("Ignore Raycast");
+
+            if (hideRenderers)
+            {
+                foreach (Renderer r in GetComponentsInChildren<Renderer>())
+                {
+                    if (r.enabled) { r.enabled = false; hiddenRenderers.Add(r); }
+                }
             }
         }
         else
         {
+            // 1. Unfreeze animation playback on exit
+            if (animator != null)
+            {
+                animator.speed = 1f;
+            }
+
+            // 2. Restore normal player layer
+            gameObject.layer = originalLayer;
+
             foreach (Renderer r in hiddenRenderers)
                 if (r != null) r.enabled = true;
             hiddenRenderers.Clear();
@@ -64,7 +90,7 @@ public class Hider : MonoBehaviour
         if (IsCaught) return;
         IsCaught = true;
 
-        // 1. Turn off the physical collider so the enemy walks right over the body
+        // Turn off the physical collider so the enemy walks right over the body
         Collider myCollider = GetComponent<Collider>();
         if (myCollider != null) myCollider.enabled = false;
 
@@ -76,17 +102,19 @@ public class Hider : MonoBehaviour
         {
             if (movement != null) movement.enabled = false;
 
-            // 2. Turn off the Character Controller
             if (controller != null) controller.enabled = false;
 
             if (agent != null && agent.enabled)
             {
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
-                // 3. Turn off the Agent entirely so it stops acting as a solid obstacle
                 agent.enabled = false;
             }
-            if (animator != null) animator.SetFloat("Speed", 0f);
+            if (animator != null)
+            {
+                animator.speed = 1f;
+                animator.SetFloat("Speed", 0f);
+            }
         }
 
         if (RoundManager.Instance != null) RoundManager.Instance.ReportCaught(this);
