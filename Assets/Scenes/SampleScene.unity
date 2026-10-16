@@ -1518,6 +1518,7 @@ MonoBehaviour:
   lookSpeed: 90
   maxYaw: 60
   approachPoint: {fileID: 0}
+  promptAnchor: {fileID: 0}
 --- !u!65 &85710566
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -12713,6 +12714,7 @@ MonoBehaviour:
   lookSpeed: 90
   maxYaw: 60
   approachPoint: {fileID: 0}
+  promptAnchor: {fileID: 0}
 --- !u!4 &623556792 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 98aacb144ad33ca4ebc6a45694d658b2, type: 3}
@@ -16366,8 +16368,8 @@ Transform:
   m_GameObject: {fileID: 794571749}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.57, y: 0.04, z: 0.32}
-  m_LocalScale: {x: 1.27, y: 0.56, z: 0.51}
+  m_LocalPosition: {x: 0.57, y: 0.138, z: 0.32}
+  m_LocalScale: {x: 1.27, y: 0.4, z: 0.51}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2131989478}
@@ -17278,8 +17280,8 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 1, g: 0.7276738, b: 0.33018857, a: 1}
-  m_Intensity: 0.2
-  m_Range: 20
+  m_Intensity: 1
+  m_Range: 5
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -17979,7 +17981,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.667
+      value: 2.7
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalPosition.y
@@ -17987,11 +17989,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -3.218
+      value: -3.22
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.7071068
+      value: 0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalRotation.x
@@ -18003,7 +18005,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -18011,7 +18013,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 270
+      value: 90
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a0bede1ac721be643804ec8ba1e89da3, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
@@ -23559,7 +23561,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d199a2fbd575cba4baa38b336acb5c0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
-  moveSpeed: 1.8
+  moveSpeed: 2
   turnSpeed: 180
   jumpHeight: 0.5
   gravity: -9.81
@@ -29439,7 +29441,7 @@ MonoBehaviour:
   repathInterval: 0.15
   attackRange: 0.7
   attackDuration: 2
-  randomSearchChance: 10
+  randomSearchChance: 40
   sureSearchChance: 99
   openSpotTriggerName: OpenSpot
   openAnimationDuration: 1.5
@@ -32031,6 +32033,7 @@ MonoBehaviour:
   lookSpeed: 90
   maxYaw: 60
   approachPoint: {fileID: 0}
+  promptAnchor: {fileID: 0}
 --- !u!65 &1624660950
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -32446,7 +32449,7 @@ MonoBehaviour:
   tvLight: {fileID: 689662498}
   tvAudio: {fileID: 1652097259}
   turnOffPosition: {fileID: 1917485569}
-  attentionRadius: 25
+  attentionRadius: 40
   minWaitTime: 10
   maxWaitTime: 20
 --- !u!1 &1671782617
@@ -41571,6 +41574,7 @@ MonoBehaviour:
   lookSpeed: 90
   maxYaw: 60
   approachPoint: {fileID: 0}
+  promptAnchor: {fileID: 0}
 --- !u!1001 &2138130336
 PrefabInstance:
   m_ObjectHideFlags: 0
