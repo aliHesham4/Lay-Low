@@ -12,8 +12,16 @@ public class HidingSpot : MonoBehaviour
 
     [Header("Bathtub Settings (Laying Down)")]
     public bool layFlatInside = false;
-    [Tooltip("If the feet and head are swapped, change X to -90 or Y to 180.")]
-    public Vector3 layFlatRotation = new Vector3(90f, 0f, 0f);
+    [Tooltip("Move everyone lying here up (+) or down (-) in the tub, in metres.")]
+    public float lyingHeightOffset = 0.08f;
+
+    // Pose copied from the reference hider (Player 1) so every character lies the same way
+    [HideInInspector] public string lyingPoseData;
+
+    // Lying pose, measured on Player 1. Directions are relative to the Inside Point.
+    static readonly Vector3 LyingHeadDir = new Vector3(0.972f, 0.231f, -0.035f);   // head points along the tub
+    static readonly Vector3 LyingFaceDir = new Vector3(-0.233f, 0.964f, -0.117f);  // face points up
+    static readonly Vector3 LyingHips = new Vector3(0.156f, -0.009f, 0f);          // where the hips sit
 
     [Header("Player Positions (Optional)")]
     public Transform insidePoint; // Place inside the bathtub (UPRIGHT, just lower Y)
@@ -128,6 +136,10 @@ public class HidingSpot : MonoBehaviour
         occupant = h;
         h.SetHidden(true, hidePlayerMesh);
 
+        // An AI hider's NavMeshAgent would drag it back onto the floor while it lies in the tub
+        UnityEngine.AI.NavMeshAgent agent = h.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (agent != null && agent.enabled) agent.enabled = false;
+
         if (insidePoint != null)
         {
             h.transform.position = insidePoint.position;
@@ -139,7 +151,12 @@ public class HidingSpot : MonoBehaviour
         if (layFlatInside)
         {
             Animator anim = h.GetComponentInChildren<Animator>();
-            if (anim != null) anim.transform.localRotation = Quaternion.Euler(layFlatRotation);
+            if (anim != null)
+            {
+                anim.transform.localRotation = Quaternion.Euler(90f, 90f, 0f); // fallback if the skeleton can't be found
+                ApplyLyingPose(h);
+                AlignLyingPose(h);
+            }
         }
 
         if (normalVisual != null) normalVisual.SetActive(false);
@@ -163,6 +180,16 @@ public class HidingSpot : MonoBehaviour
             h.transform.position = exitPoint.position;
         }
 
+        UnityEngine.AI.NavMeshAgent exitAgent = h.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (exitAgent != null && !exitAgent.enabled)
+        {
+            UnityEngine.AI.NavMeshHit navHit;
+            if (UnityEngine.AI.NavMesh.SamplePosition(h.transform.position, out navHit, 3f, UnityEngine.AI.NavMesh.AllAreas))
+                h.transform.position = navHit.position;
+        }
+
+        foreach (Animator a in h.GetComponentsInChildren<Animator>(true)) a.enabled = true;
+
         // Snap the visual mesh back upright so the character walks normally
         if (layFlatInside)
         {
@@ -174,6 +201,7 @@ public class HidingSpot : MonoBehaviour
 
         occupant = null;
         h.SetHidden(false);
+        if (exitAgent != null && !exitAgent.enabled) exitAgent.enabled = true;
 
         if (normalVisual != null) normalVisual.SetActive(true);
         if (hiddenVisual != null) hiddenVisual.SetActive(false);
@@ -183,6 +211,56 @@ public class HidingSpot : MonoBehaviour
             hideCamera.SetActive(false);
             switchedCamera = false;
         }
+    }
+
+    // Freezes the animation and copies the stored skeleton pose onto the character
+    void ApplyLyingPose(Hider h)
+    {
+        if (string.IsNullOrEmpty(lyingPoseData)) return;
+        foreach (Animator a in h.GetComponentsInChildren<Animator>()) a.enabled = false;
+
+        foreach (string entry in lyingPoseData.Split(';'))
+        {
+            string[] kv = entry.Trim().Split('|');
+            if (kv.Length != 2) continue;
+            Transform bone = FindBone(h, kv[0]);
+            string[] q = kv[1].Split(',');
+            if (bone == null || q.Length != 4) continue;
+            bone.localRotation = new Quaternion(
+                float.Parse(q[0], System.Globalization.CultureInfo.InvariantCulture),
+                float.Parse(q[1], System.Globalization.CultureInfo.InvariantCulture),
+                float.Parse(q[2], System.Globalization.CultureInfo.InvariantCulture),
+                float.Parse(q[3], System.Globalization.CultureInfo.InvariantCulture));
+        }
+    }
+
+    static Transform FindBone(Hider h, string suffix)
+    {
+        foreach (Transform t in h.GetComponentsInChildren<Transform>())
+            if (t.name.EndsWith(suffix)) return t;
+        return null;
+    }
+
+    // Rotates/moves the hider so its skeleton matches the lying pose, whatever the model's own orientation
+    void AlignLyingPose(Hider h)
+    {
+        Transform hips = FindBone(h, "Hips"), head = FindBone(h, "Head");
+        Transform ls = FindBone(h, "LeftShoulder"), rs = FindBone(h, "RightShoulder");
+        if (hips == null || head == null || ls == null || rs == null) return; // keep the plain layFlatRotation
+
+        Vector3 up = (head.position - hips.position).normalized;
+        Vector3 right = (rs.position - ls.position).normalized;
+        Vector3 face = Vector3.Cross(right, up);
+        if (up.sqrMagnitude < 0.5f || face.sqrMagnitude < 0.0001f) return;
+
+        Quaternion yawFrame = Quaternion.Euler(0f, insidePoint != null ? insidePoint.eulerAngles.y : 0f, 0f);
+        Quaternion src = Quaternion.LookRotation(up, face);
+        Quaternion dst = Quaternion.LookRotation(yawFrame * LyingHeadDir.normalized, yawFrame * LyingFaceDir.normalized);
+        h.transform.rotation = dst * Quaternion.Inverse(src) * h.transform.rotation;
+
+        // Put the hips at the same spot for every character
+        Vector3 hipsTarget = (insidePoint != null ? insidePoint.position : h.transform.position) + yawFrame * LyingHips + Vector3.up * lyingHeightOffset;
+        h.transform.position += hipsTarget - hips.position;
     }
 
     public Vector3 GetApproachPoint()

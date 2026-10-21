@@ -127,6 +127,8 @@ public class EnemyVision : MonoBehaviour
         }
     }
 
+    public void BeginChase(Hider h) { if (h != null) StartChase(h); }
+
     void StartChase(Hider h)
     {
         currentState = EnemyState.Chasing;

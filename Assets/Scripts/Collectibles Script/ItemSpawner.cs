@@ -15,7 +15,7 @@ public class ItemSpawner : MonoBehaviour
 
     [Header("Limits")]
     [Tooltip("Stop spawning if there are already this many stones sitting on the map.")]
-    public int maxStonesInMap = 3;
+    public int maxStonesInMap = 2;
 
     void Start()
     {
@@ -49,7 +49,28 @@ public class ItemSpawner : MonoBehaviour
     {
         if (stonePrefab == null || spawnPoints.Length == 0) return;
 
-        Transform randomPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
+        // Pick a random spawn point that is free: not where a stone already lies, not right next to a
+        // player, and not the same one as last time.
+        GameObject[] stones = GameObject.FindGameObjectsWithTag("CollectibleStone");
+        Hider[] players = FindObjectsByType<Hider>(FindObjectsSortMode.None);
+        var free = new System.Collections.Generic.List<Transform>();
+        foreach (Transform p in spawnPoints)
+        {
+            if (p == null || p == lastPoint) continue;
+            bool blocked = false;
+            foreach (GameObject st in stones)
+                if (Vector3.Distance(st.transform.position, p.position) < 2f) { blocked = true; break; }
+            if (!blocked)
+                foreach (Hider h in players)
+                    if (Vector3.Distance(h.transform.position, p.position) < 2.5f) { blocked = true; break; }
+            if (!blocked) free.Add(p);
+        }
+        if (free.Count == 0) return;
+
+        Transform randomPoint = free[Random.Range(0, free.Count)];
+        lastPoint = randomPoint;
         Instantiate(stonePrefab, randomPoint.position, Quaternion.identity);
     }
+
+    private Transform lastPoint;
 }

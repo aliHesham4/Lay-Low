@@ -22,11 +22,13 @@ public class PlayerStoneThrower : MonoBehaviour
     private bool hasStone = false;
     private bool isTargeting = false;
     private Collider playerCollider;
+    private Hider hiderRef;
 
     void Start()
     {
         if (targetIndicator != null) targetIndicator.SetActive(false);
         if (mainCamera == null) mainCamera = Camera.main;
+        hiderRef = GetComponent<Hider>();
 
         // Grab the player's collider to prevent the stone from hitting them
         playerCollider = GetComponent<Collider>();
@@ -42,6 +44,17 @@ public class PlayerStoneThrower : MonoBehaviour
     void Update()
     {
         if (!hasStone) return;
+
+        // No throwing from inside a hiding spot
+        if (hiderRef != null && hiderRef.IsHidden)
+        {
+            if (isTargeting)
+            {
+                isTargeting = false;
+                if (targetIndicator != null) targetIndicator.SetActive(false);
+            }
+            return;
+        }
 
         // Enter targeting mode
         if (!isTargeting && Keyboard.current.tKey.wasPressedThisFrame)
