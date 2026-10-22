@@ -43,6 +43,11 @@ public class EnemyVision : MonoBehaviour
     public string speedFloatName = "Speed";
     public string runBoolName = "IsRunning";
     public string stabTriggerName = "Stab";
+    [Header("Stab Sound")]
+    public AudioClip stabSound;
+    [Range(0f, 1f)] public float stabVolume = 1f;
+    [Tooltip("Seconds after the stab starts before the cut sound plays (match the knife hit in the animation).")]
+    public float stabSoundDelay = 0.3f;
 
     private NavMeshAgent agent;
     private Animator animator;
@@ -333,6 +338,15 @@ public class EnemyVision : MonoBehaviour
         }
 
         h.Freeze();
+        if (stabSound != null) StartCoroutine(PlayStabSound());
+    }
+
+    System.Collections.IEnumerator PlayStabSound()
+    {
+        if (stabSoundDelay > 0f) yield return new WaitForSeconds(stabSoundDelay);
+        AudioSource src = GetComponent<AudioSource>();
+        if (src == null) src = gameObject.AddComponent<AudioSource>();
+        src.PlayOneShot(stabSound, stabVolume);
     }
 
     void UpdateAttacking()
