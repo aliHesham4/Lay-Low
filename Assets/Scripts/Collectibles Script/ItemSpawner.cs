@@ -1,25 +1,37 @@
 using System.Collections;
 using UnityEngine;
 
+// Drops a random mix of COLLECTIBLES (kept in the bag: rock, feather, door lock...) and
+// INSTANTS (used on touch: pepper...) on random spawn points. Never more than maxItemsOnMap in total.
 public class ItemSpawner : MonoBehaviour
 {
-    [Header("Spawner Setup")]
-    public GameObject stonePrefab;
+    [Header("Spawn Points")]
     public Transform[] spawnPoints;
 
-    [Header("Timing Settings")]
-    [Tooltip("Minimum time (in seconds) before a new stone spawns.")]
-    public float minSpawnTime = 15f;
-    [Tooltip("Maximum time (in seconds) before a new stone spawns.")]
-    public float maxSpawnTime = 25f;
+    [Header("What can spawn")]
+    [Tooltip("Items that go into the bag. They must keep the tag CollectibleStone so players and the AI can find them.")]
+    public GameObject[] collectiblePrefabs;
+    [Tooltip("Items that act the moment someone touches them (pepper...).")]
+    public GameObject[] instantPrefabs;
+    [Range(0f, 1f)] [Tooltip("Chance that a new drop is an instant instead of a collectible.")]
+    public float instantChance = 0.3f;
+
+    [Header("Timing")]
+    public float minSpawnTime = 5f;
+    public float maxSpawnTime = 10f;
 
     [Header("Limits")]
-    [Tooltip("Stop spawning if there are already this many stones sitting on the map.")]
-    public int maxStonesInMap = 2;
+    [Tooltip("Maximum collectibles + instants lying on the map at the same time.")]
+    public int maxItemsOnMap = 3;
+    [Tooltip("Maximum instants (peppers...) lying on the map at the same time.")]
+    public int maxInstantsInMap = 2;
+    [Tooltip("Layer given to instants so they are easy to recognise.")]
+    public string instantLayerName = "Pepper";
+
+    private Transform lastPoint;
 
     void Start()
     {
-        // Start the infinite spawning loop as soon as the game begins
         StartCoroutine(SpawnRoutine());
     }
 
@@ -27,31 +39,43 @@ public class ItemSpawner : MonoBehaviour
     {
         while (true)
         {
-            // 1. Pick a random wait time (e.g., between 15 and 25 seconds)
-            float waitTime = Random.Range(minSpawnTime, maxSpawnTime);
-
-            // 2. Pause this script for that amount of time
-            yield return new WaitForSeconds(waitTime);
-
-            // 3. Count how many stones are currently on the map
-            // Note: Your stone prefab MUST have the tag "CollectibleStone" for this to work
-            GameObject[] existingStones = GameObject.FindGameObjectsWithTag("CollectibleStone");
-
-            // 4. If we haven't hit the limit, spawn a new one
-            if (existingStones.Length < maxStonesInMap)
-            {
-                SpawnStone();
-            }
+            yield return new WaitForSeconds(Random.Range(minSpawnTime, maxSpawnTime));
+            if (CountCollectibles() + CountInstants() < maxItemsOnMap) SpawnRandomItem();
         }
     }
 
-    void SpawnStone()
-    {
-        if (stonePrefab == null || spawnPoints.Length == 0) return;
+    int CountCollectibles() { return GameObject.FindGameObjectsWithTag("CollectibleStone").Length; }
+    int CountInstants() { return FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None).Length; }
 
-        // Pick a random spawn point that is free: not where a stone already lies, not right next to a
-        // player, and not the same one as last time.
+    void SpawnRandomItem()
+    {
+        bool canInstant = instantPrefabs != null && instantPrefabs.Length > 0 && CountInstants() < maxInstantsInMap;
+        bool canCollectible = collectiblePrefabs != null && collectiblePrefabs.Length > 0;
+        if (!canInstant && !canCollectible) return;
+
+        bool instant = canInstant && (!canCollectible || Random.value < instantChance);
+        GameObject[] pool = instant ? instantPrefabs : collectiblePrefabs;
+        GameObject prefab = pool[Random.Range(0, pool.Length)];
+        if (prefab == null) return;
+
+        Transform point = PickFreePoint();
+        if (point == null) return;
+        lastPoint = point;
+
+        GameObject item = Instantiate(prefab, point.position, Quaternion.identity);
+        if (instant)
+        {
+            int layer = LayerMask.NameToLayer(instantLayerName);
+            if (layer >= 0) foreach (Transform t in item.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
+        }
+    }
+
+    // A random spawn point that is free: no item already there, nobody standing next to it, not the last one used
+    Transform PickFreePoint()
+    {
+        if (spawnPoints == null || spawnPoints.Length == 0) return null;
         GameObject[] stones = GameObject.FindGameObjectsWithTag("CollectibleStone");
+        PepperCollectible[] peppers = FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None);
         Hider[] players = FindObjectsByType<Hider>(FindObjectsSortMode.None);
         var free = new System.Collections.Generic.List<Transform>();
         foreach (Transform p in spawnPoints)
@@ -61,16 +85,14 @@ public class ItemSpawner : MonoBehaviour
             foreach (GameObject st in stones)
                 if (Vector3.Distance(st.transform.position, p.position) < 2f) { blocked = true; break; }
             if (!blocked)
+                foreach (PepperCollectible pc in peppers)
+                    if (Vector3.Distance(pc.transform.position, p.position) < 2f) { blocked = true; break; }
+            if (!blocked)
                 foreach (Hider h in players)
                     if (Vector3.Distance(h.transform.position, p.position) < 2.5f) { blocked = true; break; }
             if (!blocked) free.Add(p);
         }
-        if (free.Count == 0) return;
-
-        Transform randomPoint = free[Random.Range(0, free.Count)];
-        lastPoint = randomPoint;
-        Instantiate(stonePrefab, randomPoint.position, Quaternion.identity);
+        if (free.Count == 0) return null;
+        return free[Random.Range(0, free.Count)];
     }
-
-    private Transform lastPoint;
 }

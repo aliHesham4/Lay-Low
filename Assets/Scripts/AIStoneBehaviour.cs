@@ -62,7 +62,15 @@ public class AIStoneBehaviour : MonoBehaviour
     [Tooltip("Red target marker shown while she aims (like Player 1's blue one).")]
     public GameObject targetIndicator;
 
-    enum Mode { Idle, GoingToStone, Throwing }
+    [Header("Instants (pepper...)")]
+    [Tooltip("While walking normally she grabs an instant item (pepper) that is this close. Collectibles come first.")]
+    public float instantGrabRadius = 2.5f;
+    [Tooltip("She will not go for a collectible that lies this close to the killer.")]
+    public float killerNearItemRadius = 5f;
+    [Tooltip("She drops the idea of a collectible when the killer gets this close to HER.")]
+    public float abortCollectDistance = 8f;
+
+    enum Mode { Idle, GoingToStone, GoingToInstant, Throwing }
     Mode mode = Mode.Idle;
 
     AIHider ai;
@@ -74,6 +82,8 @@ public class AIStoneBehaviour : MonoBehaviour
     bool hasStone;
     float nextSeek;
     float thinkTimer;
+    PepperCollectible instantTarget;
+    float instantUntil;
 
     public bool HasStone { get { return hasStone; } }
 
@@ -107,10 +117,44 @@ public class AIStoneBehaviour : MonoBehaviour
             Vector3.Distance(transform.position, enemy.transform.position) > 9f)
             ai.LeaveHidingSpot();
 
+        if (HandleInstants(stoneOnMap)) return;
+
         if (!hasStone && TryPickUpNearbyStone()) return;
 
         if (!hasStone) UpdateCollecting();
         else UpdateDeciding();
+    }
+
+    // ---------------- Instants (pepper) ----------------
+    // Collectibles are her goal. An instant is only picked up when it is right next to her path.
+    // Returns true while she is detouring to one.
+    bool HandleInstants(bool stoneWanted)
+    {
+        if (mode == Mode.GoingToInstant)
+        {
+            if (instantTarget == null || ai.InDanger || hider.IsCaught || Time.time > instantUntil) { Release(); return false; }
+            return true;
+        }
+        if (mode != Mode.Idle || !ai.IsWandering || ai.InDanger) return false;
+
+        // wanting a collectible comes first: then only grab an instant she practically touches
+        float radius = (!hasStone && stoneWanted) ? 1.2f : instantGrabRadius;
+        PepperCollectible best = null; float bestDist = radius;
+        foreach (PepperCollectible pc in FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None))
+        {
+            float d = Vector3.Distance(transform.position, pc.transform.position);
+            if (d < bestDist) { bestDist = d; best = pc; }
+        }
+        if (best == null) return false;
+
+        instantTarget = best;
+        instantUntil = Time.time + 4f;
+        mode = Mode.GoingToInstant;
+        ai.externalControl = true;
+        agent.isStopped = false;
+        agent.speed = ai.wanderSpeed;
+        MoveTo(best.transform.position);
+        return true;
     }
 
     // ---------------- Collecting ----------------
@@ -119,6 +163,8 @@ public class AIStoneBehaviour : MonoBehaviour
         if (mode == Mode.Idle)
         {
             if (Time.time < nextSeek || !ai.IsWandering || ai.InDanger) return;
+            // not worth the risk while the killer is close to her
+            if (enemy != null && enemy.enabled && Vector3.Distance(transform.position, enemy.transform.position) < abortCollectDistance) return;
             nextSeek = Time.time + seekInterval;
             if (Random.value > seekChance) return;
 
@@ -138,6 +184,12 @@ public class AIStoneBehaviour : MonoBehaviour
         {
             // Someone else took it, or the killer showed up: forget it
             if (targetStone == null || ai.InDanger) { Release(); return; }
+            if (enemy != null && enemy.enabled && Vector3.Distance(transform.position, enemy.transform.position) < abortCollectDistance)
+            {
+                nextSeek = Time.time + 3f;
+                Release();
+                return;
+            }
 
             Vector3 a = transform.position, b = targetStone.transform.position;
             a.y = 0f; b.y = 0f;
@@ -184,6 +236,7 @@ public class AIStoneBehaviour : MonoBehaviour
             float d = Vector3.Distance(transform.position, s.transform.position);
             if (d >= bestDist) continue;
             if (HumanNear(s.transform.position)) continue; // leave it for the player
+            if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, s.transform.position) < killerNearItemRadius) continue; // killer is right there
             bestDist = d; best = s;
         }
         return best;
@@ -459,6 +512,7 @@ public class AIStoneBehaviour : MonoBehaviour
     {
         mode = Mode.Idle;
         targetStone = null;
+        instantTarget = null;
         if (targetIndicator != null) targetIndicator.SetActive(false);
         if (ai != null)
         {

@@ -48,6 +48,8 @@ public class AIHider : MonoBehaviour
 
     // Used by AIStoneBehaviour: while true it drives the agent (walking to a stone / throwing)
     [HideInInspector] public bool externalControl;
+    // Set by SpeedBoost (pepper): while > 0 it overrides her walking speed
+    [HideInInspector] public float speedOverride;
     // Set by AIStoneBehaviour while a stone is on the map and she has none: collecting beats idle hiding
     [HideInInspector] public bool suppressIdleHide;
     public bool IsWandering { get { return state == State.Wandering && !externalControl; } }
@@ -137,6 +139,11 @@ public class AIHider : MonoBehaviour
         // Calculate current moving speed for animations
         float currentSpeed = agent.velocity.magnitude;
         SetAnim(currentSpeed);
+    }
+
+    void LateUpdate()
+    {
+        if (speedOverride > 0f && agent != null && agent.enabled && agent.isOnNavMesh) agent.speed = speedOverride;
     }
 
     void HandleRotation()

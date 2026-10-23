@@ -31428,7 +31428,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 66d4714d9b6ba484d85c5267552b563b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.1392002
+      value: -1.251
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 66d4714d9b6ba484d85c5267552b563b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -31799,7 +31799,7 @@ MonoBehaviour:
   repathInterval: 0.15
   attackRange: 0.7
   attackDuration: 2
-  randomSearchChance: 40
+  randomSearchChance: 35
   sureSearchChance: 99
   openSpotTriggerName: OpenSpot
   openAnimationDuration: 1.5
@@ -34323,17 +34323,18 @@ MonoBehaviour:
   wanderSpeed: 2
   fleeSpeed: 2.4
   wanderRadius: 5
-  wanderPause: 1
+  wanderPause: 0.6
   dangerDistance: 4
-  enterDistance: 0.5
+  enterDistance: 0.1
   hideTimeRange: {x: 6, y: 12}
   safeDistance: 6
   idleHideDelayRange: {x: 25, y: 45}
-  panicDistance: 3.5
-  panicChancePerSecond: 0.18
-  randomSpotVariety: 8
+  panicDistance: 1
+  panicChancePerSecond: 0.13
+  randomSpotVariety: 6
   speedFloatName: Speed
   externalControl: 0
+  speedOverride: 0
   suppressIdleHide: 0
 --- !u!114 &1623164792
 MonoBehaviour:
@@ -34412,6 +34413,9 @@ MonoBehaviour:
   releaseDelay: 0.4
   throwTriggerName: Throw
   targetIndicator: {fileID: 225760214}
+  instantGrabRadius: 2
+  killerNearItemRadius: 5
+  abortCollectDistance: 6
   spaceLimit: {fileID: 511183696}
   wallMargin: 0.8
 --- !u!114 &1623164795
@@ -34888,8 +34892,8 @@ MonoBehaviour:
   tvAudio: {fileID: 1652097259}
   turnOffPosition: {fileID: 1917485569}
   attentionRadius: 40
-  minWaitTime: 10
-  maxWaitTime: 20
+  minWaitTime: 20
+  maxWaitTime: 120
 --- !u!1 &1671782617
 GameObject:
   m_ObjectHideFlags: 0
@@ -35244,7 +35248,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e083ece7417a68642812a64ed3c80fe8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSpawner
-  stonePrefab: {fileID: 7046931272860732009, guid: 45ef89980323bcc4fa59e0205780b8de, type: 3}
   spawnPoints:
   - {fileID: 222898571}
   - {fileID: 1849287300}
@@ -35258,9 +35261,16 @@ MonoBehaviour:
   - {fileID: 517310864}
   - {fileID: 907311901}
   - {fileID: 1836301691}
+  collectiblePrefabs:
+  - {fileID: 7046931272860732009, guid: 45ef89980323bcc4fa59e0205780b8de, type: 3}
+  instantPrefabs:
+  - {fileID: 7046931272860732009, guid: 79e46d60e94fba1439e3975846c5e07c, type: 3}
+  instantChance: 0.3
   minSpawnTime: 5
   maxSpawnTime: 10
-  maxStonesInMap: 2
+  maxItemsOnMap: 3
+  maxInstantsInMap: 2
+  instantLayerName: Pepper
 --- !u!1001 &1683948543
 PrefabInstance:
   m_ObjectHideFlags: 0
