@@ -40,6 +40,10 @@ public class HidingSpot : MonoBehaviour
     public float lookSpeed = 90f;
     public float maxYaw = 60f;
 
+    [Header("Fridge (optional)")]
+    [Tooltip("Only for the fridge: animates its doors and light.")]
+    public FridgeDoors fridge;
+
     [Header("AI hider (optional)")]
     public Transform approachPoint;
 
@@ -168,6 +172,7 @@ public class HidingSpot : MonoBehaviour
             hideCamera.SetActive(true);
             switchedCamera = true;
         }
+        if (fridge != null) fridge.PlayEnter();
         return true;
     }
 
@@ -211,6 +216,13 @@ public class HidingSpot : MonoBehaviour
             hideCamera.SetActive(false);
             switchedCamera = false;
         }
+        if (fridge != null) fridge.PlayExit();
+    }
+
+    // Called by the enemy when he starts opening this spot.
+    public void NotifyEnemyOpening(float duration)
+    {
+        if (fridge != null) fridge.EnemyOpens(duration);
     }
 
     // Freezes the animation and copies the stored skeleton pose onto the character

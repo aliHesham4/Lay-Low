@@ -271,6 +271,7 @@ public class EnemyVision : MonoBehaviour
         {
             currentState = EnemyState.OpeningSpot;
             openingTimer = 0f;
+            if (targetSpot != null) targetSpot.NotifyEnemyOpening(openAnimationDuration);
             agent.isStopped = true;
             agent.velocity = Vector3.zero;
 
