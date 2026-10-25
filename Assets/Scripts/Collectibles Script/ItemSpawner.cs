@@ -25,6 +25,8 @@ public class ItemSpawner : MonoBehaviour
     public int maxItemsOnMap = 3;
     [Tooltip("Maximum instants (peppers...) lying on the map at the same time.")]
     public int maxInstantsInMap = 2;
+    [Tooltip("Maximum party whistles lying on the map at the same time.")]
+    public int maxWhistlesInMap = 1;
     [Tooltip("Layer given to instants so they are easy to recognise.")]
     public string instantLayerName = "Pepper";
 
@@ -44,7 +46,11 @@ public class ItemSpawner : MonoBehaviour
         }
     }
 
-    int CountCollectibles() { return GameObject.FindGameObjectsWithTag("CollectibleStone").Length; }
+    int CountCollectibles()
+    {
+        return GameObject.FindGameObjectsWithTag("CollectibleStone").Length +
+               FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None).Length;
+    }
     int CountInstants() { return FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None).Length; }
 
     void SpawnRandomItem()
@@ -57,6 +63,15 @@ public class ItemSpawner : MonoBehaviour
         GameObject[] pool = instant ? instantPrefabs : collectiblePrefabs;
         GameObject prefab = pool[Random.Range(0, pool.Length)];
         if (prefab == null) return;
+        // limit whistles: pick something else when one is already lying around
+        if (prefab.GetComponent<WhistleCollectible>() != null &&
+            FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None).Length >= maxWhistlesInMap)
+        {
+            var others = new System.Collections.Generic.List<GameObject>();
+            foreach (GameObject g in pool) if (g != null && g.GetComponent<WhistleCollectible>() == null) others.Add(g);
+            if (others.Count == 0) return;
+            prefab = others[Random.Range(0, others.Count)];
+        }
 
         Transform point = PickFreePoint();
         if (point == null) return;
@@ -76,6 +91,7 @@ public class ItemSpawner : MonoBehaviour
         if (spawnPoints == null || spawnPoints.Length == 0) return null;
         GameObject[] stones = GameObject.FindGameObjectsWithTag("CollectibleStone");
         PepperCollectible[] peppers = FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None);
+        WhistleCollectible[] whistles = FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None);
         Hider[] players = FindObjectsByType<Hider>(FindObjectsSortMode.None);
         var free = new System.Collections.Generic.List<Transform>();
         foreach (Transform p in spawnPoints)
@@ -87,6 +103,9 @@ public class ItemSpawner : MonoBehaviour
             if (!blocked)
                 foreach (PepperCollectible pc in peppers)
                     if (Vector3.Distance(pc.transform.position, p.position) < 2f) { blocked = true; break; }
+            if (!blocked)
+                foreach (WhistleCollectible wc in whistles)
+                    if (Vector3.Distance(wc.transform.position, p.position) < 2f) { blocked = true; break; }
             if (!blocked)
                 foreach (Hider h in players)
                     if (Vector3.Distance(h.transform.position, p.position) < 2.5f) { blocked = true; break; }

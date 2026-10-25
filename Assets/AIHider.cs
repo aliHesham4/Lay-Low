@@ -346,6 +346,19 @@ public class AIHider : MonoBehaviour
         PickWanderPoint(false);
     }
 
+    // After making noise: get away from this spot, preferably into a hiding spot
+    public void RunAndHide()
+    {
+        if (state != State.Wandering) return;
+        agent.isStopped = false;
+        if (!StartHiding(true))
+        {
+            agent.speed = fleeSpeed;
+            noHideUntil = Time.time + 3f;
+            PickWanderPoint(true);
+        }
+    }
+
     // Used by AIStoneBehaviour (she steps out to throw)
     public void LeaveHidingSpot()
     {

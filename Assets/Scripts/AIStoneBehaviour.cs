@@ -86,6 +86,7 @@ public class AIStoneBehaviour : MonoBehaviour
     float instantUntil;
 
     public bool HasStone { get { return hasStone; } }
+    public bool Busy { get { return mode != Mode.Idle; } }
 
     void Start()
     {
@@ -195,7 +196,8 @@ public class AIStoneBehaviour : MonoBehaviour
             a.y = 0f; b.y = 0f;
             if (Vector3.Distance(a, b) <= pickupDistance)
             {
-                PickUp(targetStone);
+                // a whistle grabs itself (WhistleCollectible); only rocks are picked up here
+                if (targetStone.GetComponent<WhistleCollectible>() == null) PickUp(targetStone);
             }
             else if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
             {
@@ -238,6 +240,18 @@ public class AIStoneBehaviour : MonoBehaviour
             if (HumanNear(s.transform.position)) continue; // leave it for the player
             if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, s.transform.position) < killerNearItemRadius) continue; // killer is right there
             bestDist = d; best = s;
+        }
+        WhistleHolder wh = GetComponent<WhistleHolder>();
+        if (wh == null || !wh.HasWhistle)
+        {
+            foreach (WhistleCollectible w in FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None))
+            {
+                float d = Vector3.Distance(transform.position, w.transform.position);
+                if (d >= bestDist) continue;
+                if (HumanNear(w.transform.position)) continue;
+                if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, w.transform.position) < killerNearItemRadius) continue;
+                bestDist = d; best = w.gameObject;
+            }
         }
         return best;
     }

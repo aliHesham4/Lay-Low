@@ -10,6 +10,23 @@ public class EnemyWander : MonoBehaviour
     private Animator animator; // 1. Added Animator reference
     private float timer;
 
+    // Heard a noise: walk there first, then carry on wandering
+    private bool hasNoise;
+    private float noiseTimeout;
+
+    public void GoTo(Vector3 p)
+    {
+        if (agent == null) agent = GetComponent<NavMeshAgent>();
+        NavMeshHit hit;
+        if (agent == null || !agent.isOnNavMesh) return;
+        if (NavMesh.SamplePosition(p, out hit, 3f, NavMesh.AllAreas))
+        {
+            hasNoise = true;
+            noiseTimeout = Time.time + 20f;
+            agent.SetDestination(hit.position);
+        }
+    }
+
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -25,6 +42,13 @@ public class EnemyWander : MonoBehaviour
         {
             float speed = agent.velocity.magnitude / agent.speed;
             animator.SetFloat("Speed", speed);
+        }
+
+        if (hasNoise)
+        {
+            bool arrived = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.4f;
+            if (arrived || Time.time > noiseTimeout) { hasNoise = false; timer = 0f; }
+            else return; // keep walking to the noise
         }
 
         // Check if agent reached destination

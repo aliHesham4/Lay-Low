@@ -8,8 +8,11 @@ public class PlayerHUD : MonoBehaviour
     public Image avatarIcon;
     public TextMeshProUGUI nameText;
     public Image bagIcon;          // The bag frame background
-    public Image itemIcon;         // First item slot
-    public Image[] extraSlots;     // Further item slots (2 more)
+    public Image itemIcon;         // TEMPLATE for one item slot (stays hidden, copied for every item)
+    [Tooltip("Row (with a Horizontal Layout Group) that sits right next to the backpack and holds the carried items.")]
+    public RectTransform itemsRow;
+    public float itemSlotSize = 36f;
+    public int maxItems = 3;
 
     [Header("Player Setup Data")]
     public string playerName = "Player 1";
@@ -42,44 +45,53 @@ public class PlayerHUD : MonoBehaviour
         if (!caughtShown && hiderRef != null && hiderRef.IsCaught) ShowCaught();
     }
 
-    Image[] AllSlots()
+    // ---------- Carried items (shown as a row next to the backpack) ----------
+    readonly System.Collections.Generic.List<Image> carried = new System.Collections.Generic.List<Image>();
+    readonly System.Collections.Generic.List<string> carriedIds = new System.Collections.Generic.List<string>();
+
+    public int ItemCount { get { return carried.Count; } }
+
+    // Add any item (rock, feather, door lock...) with its own icon. Returns false when the bag is full.
+    public bool AddItem(string id, Sprite icon)
     {
-        int n = 1 + (extraSlots != null ? extraSlots.Length : 0);
-        Image[] r = new Image[n];
-        r[0] = itemIcon;
-        for (int i = 1; i < n; i++) r[i] = extraSlots[i - 1];
-        return r;
+        if (icon == null || itemIcon == null || carried.Count >= maxItems) return false;
+        Transform parent = itemsRow != null ? (Transform)itemsRow : itemIcon.transform.parent;
+        Image slot = Instantiate(itemIcon, parent);
+        slot.name = "Item_" + id;
+        slot.sprite = icon;
+        slot.preserveAspect = true;
+        slot.raycastTarget = false;
+        float aspect = icon.rect.width / Mathf.Max(1f, icon.rect.height);
+        slot.rectTransform.sizeDelta = new Vector2(itemSlotSize * Mathf.Clamp(aspect, 1f, 1.4f), itemSlotSize);
+        slot.gameObject.SetActive(true);
+        carried.Add(slot);
+        carriedIds.Add(id);
+        return true;
+    }
+
+    // Remove one item by id (the most recently added of that kind). Returns false if she has none.
+    public bool RemoveItem(string id)
+    {
+        for (int i = carried.Count - 1; i >= 0; i--)
+        {
+            if (carriedIds[i] != id) continue;
+            if (carried[i] != null) Destroy(carried[i].gameObject);
+            carried.RemoveAt(i); carriedIds.RemoveAt(i);
+            return true;
+        }
+        return false;
     }
 
     void ClearAllSlots()
     {
-        foreach (Image s in AllSlots()) if (s != null) s.gameObject.SetActive(false);
+        foreach (Image s in carried) if (s != null) Destroy(s.gameObject);
+        carried.Clear(); carriedIds.Clear();
+        if (itemIcon != null) itemIcon.gameObject.SetActive(false); // the template stays hidden
     }
 
-    // Fills the next free slot (up to 3 items)
-    public void ShowStoneInBag()
-    {
-        if (stoneSprite == null) return;
-        foreach (Image s in AllSlots())
-        {
-            if (s != null && !s.gameObject.activeSelf)
-            {
-                s.sprite = stoneSprite;
-                s.gameObject.SetActive(true);
-                return;
-            }
-        }
-    }
-
-    // Removes the most recently added item
-    public void EmptyBag()
-    {
-        Image[] all = AllSlots();
-        for (int i = all.Length - 1; i >= 0; i--)
-        {
-            if (all[i] != null && all[i].gameObject.activeSelf) { all[i].gameObject.SetActive(false); return; }
-        }
-    }
+    // Rock helpers used by the throwers (unchanged API)
+    public void ShowStoneInBag() { AddItem("rock", stoneSprite); }
+    public void EmptyBag() { if (!RemoveItem("rock") && carried.Count > 0) RemoveItem(carriedIds[carried.Count - 1]); }
 
     // Call AddScore(1) for every player who survives a round.
     public void AddScore(int amount) { SetScore(score + amount); }

@@ -70,6 +70,18 @@ public class EnemyVision : MonoBehaviour
     private float randomSpotCheckTimer;
     private Dictionary<HidingSpot, float> checkedSpots = new Dictionary<HidingSpot, float>();
 
+    // A loud noise (party horn). He walks to the spot unless he is already busy chasing or searching.
+    public void HearNoise(Vector3 pos, float radius)
+    {
+        if (!enabled || currentState != EnemyState.Searching) return;
+        if (agent == null) agent = GetComponent<NavMeshAgent>();
+        if (agent == null) return;
+        if (Vector3.Distance(transform.position, pos) > radius) return;
+        if (!agent.enabled || !agent.isOnNavMesh) return;
+        if (wander != null && wander.enabled) wander.GoTo(pos);
+        else agent.SetDestination(pos);
+    }
+
     public Hider CurrentTarget
     {
         get
