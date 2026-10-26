@@ -197,7 +197,7 @@ public class AIStoneBehaviour : MonoBehaviour
             if (Vector3.Distance(a, b) <= pickupDistance)
             {
                 // a whistle grabs itself (WhistleCollectible); only rocks are picked up here
-                if (targetStone.GetComponent<WhistleCollectible>() == null) PickUp(targetStone);
+                if (targetStone.GetComponent<WhistleCollectible>() == null && targetStone.GetComponent<FeatherCollectible>() == null) PickUp(targetStone);
             }
             else if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
             {
@@ -251,6 +251,18 @@ public class AIStoneBehaviour : MonoBehaviour
                 if (HumanNear(w.transform.position)) continue;
                 if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, w.transform.position) < killerNearItemRadius) continue;
                 bestDist = d; best = w.gameObject;
+            }
+        }
+        FeatherHolder fh = GetComponent<FeatherHolder>();
+        if (fh == null || !fh.HasFeather)
+        {
+            foreach (FeatherCollectible fc in FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None))
+            {
+                float d = Vector3.Distance(transform.position, fc.transform.position);
+                if (d >= bestDist) continue;
+                if (HumanNear(fc.transform.position)) continue;
+                if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, fc.transform.position) < killerNearItemRadius) continue;
+                bestDist = d; best = fc.gameObject;
             }
         }
         return best;

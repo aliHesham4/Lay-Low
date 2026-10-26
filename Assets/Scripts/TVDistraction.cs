@@ -35,7 +35,7 @@ public class TVDistraction : MonoBehaviour
         Invoke(nameof(TurnOn), randomTime);
     }
 
-void TurnOn()
+    void TurnOn()
     {
         if (hasPlayedOnce) return;
 
@@ -56,24 +56,15 @@ void TurnOn()
         if (tvAudio != null) tvAudio.Play();
         if (outline != null) outline.SetVisible(true);
 
-        EnemyVision[] enemies = FindObjectsByType<EnemyVision>(FindObjectsSortMode.None);
-        Debug.Log($"TV Turned on! Found {enemies.Length} enemies in the scene."); // <--- ADD THIS
-
-        foreach (EnemyVision enemy in enemies)
+        // The killer comes to switch it off: right away if he is wandering or going to a sound,
+        // after he finishes if he is chasing / killing / checking a hiding spot.
+        Vector3 destination = turnOffPosition != null ? turnOffPosition.position : transform.position;
+        foreach (EnemyVision enemy in FindObjectsByType<EnemyVision>(FindObjectsSortMode.None))
         {
-            float dist = Vector3.Distance(transform.position, enemy.transform.position);
-            Debug.Log($"Enemy is {dist} meters away."); // <--- ADD THIS
-
-            if (dist <= attentionRadius)
+            if (enemy.HearAppliance(this, destination, attentionRadius, TurnOff))
             {
-                NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
-                if (agent != null)
-                {
-                    Vector3 destination = turnOffPosition != null ? turnOffPosition.position : transform.position;
-                    agent.SetDestination(destination);
-                    respondingAgent = agent;
-                    break;
-                }
+                respondingAgent = enemy.GetComponent<NavMeshAgent>();
+                break;
             }
         }
     }
@@ -84,26 +75,14 @@ void TurnOn()
 
         if (IsOn && respondingAgent != null)
         {
+            EnemyVision ev = respondingAgent.GetComponent<EnemyVision>();
+            if (ev != null && !ev.IsGoingToAppliance) return; // only switches off when he actually came for it
+
             Vector3 targetPos = turnOffPosition != null ? turnOffPosition.position : transform.position;
             Vector3 agentPos = respondingAgent.transform.position;
-
-            // Ignore height differences by forcing them to the same Y level
             targetPos.y = agentPos.y;
 
-            // Calculate flat 2D distance
-            float distance = Vector3.Distance(agentPos, targetPos);
-
-            if (distance <= 1f)
-            {
-                // 1. Reset the path FIRST while we still have the reference
-                if (respondingAgent.isActiveAndEnabled && respondingAgent.isOnNavMesh)
-                {
-                    respondingAgent.ResetPath();
-                }
-
-                // 2. THEN turn off the TV (which clears the respondingAgent variable)
-                TurnOff();
-            }
+            if (Vector3.Distance(agentPos, targetPos) <= 1f) TurnOff();
         }
     }
 
@@ -118,6 +97,10 @@ void TurnOn()
         if (tvAudio != null) tvAudio.Stop();
         if (outline != null) outline.SetVisible(false);
 
-        if (wasOn) DistractionGate.Ended();
+        if (wasOn)
+        {
+            DistractionGate.Ended();
+            foreach (EnemyVision enemy in FindObjectsByType<EnemyVision>(FindObjectsSortMode.None)) enemy.ApplianceEnded(this);
+        }
     }
 }

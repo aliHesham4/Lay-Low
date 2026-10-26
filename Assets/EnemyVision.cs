@@ -21,6 +21,8 @@ public class EnemyVision : MonoBehaviour
     [Header("Movement Settings")]
     public float patrolSpeed = 2f;
     public float chaseSpeed = 5f;
+    [Tooltip("Extra speed on top of the walking speed when he goes to a laugh.")]
+    public float laughSpeedBonus = 0.2f;
 
     [Header("Chase Settings")]
     [Tooltip("Seconds without seeing anyone before giving up and going back to patrol.")]
@@ -38,6 +40,14 @@ public class EnemyVision : MonoBehaviour
     public float sureSearchChance = 99f;
     public string openSpotTriggerName = "OpenSpot";
     public float openAnimationDuration = 1.5f;
+
+    [Header("Distractions")]
+    [Tooltip("Seconds he keeps walking towards a sound before giving up.")]
+    public float noiseGiveUpTime = 20f;
+    [Tooltip("Seconds he keeps walking towards the TV / vacuum before giving up.")]
+    public float applianceGiveUpTime = 45f;
+    [Tooltip("How close he must get to the TV / vacuum to switch it off.")]
+    public float switchOffDistance = 1.5f;
 
     [Header("Animator Parameter Names")]
     public string speedFloatName = "Speed";
@@ -70,16 +80,201 @@ public class EnemyVision : MonoBehaviour
     private float randomSpotCheckTimer;
     private Dictionary<HidingSpot, float> checkedSpots = new Dictionary<HidingSpot, float>();
 
-    // A loud noise (party horn). He walks to the spot unless he is already busy chasing or searching.
-    public void HearNoise(Vector3 pos, float radius)
+    // ---------- Distractions ----------
+    // Sounds (stone, whistle, laugh): only followed while he is wandering. Chasing = ignored.
+    // Killing / checking a hiding spot = the latest sound is remembered and followed afterwards.
+    // A newer sound replaces the one he is walking to.
+    // Appliances (TV, vacuum): always win over sounds; remembered while he is busy and done afterwards.
+    private enum Lure { None, Noise, Appliance }
+    private Lure lure = Lure.None;
+    private Vector3 lurePos;
+    private MonoBehaviour lureSource;
+    private System.Action lureSwitchOff;
+    private bool runningToNoise;
+
+    private bool pendingNoise;
+    private Vector3 pendingNoisePos;
+    private bool pendingNoiseRun;
+
+    private MonoBehaviour pendingApplianceSource;
+    private Vector3 pendingAppliancePos;
+    private System.Action pendingApplianceSwitchOff;
+
+    public bool IsBusy { get { return currentState != EnemyState.Searching; } }
+    public bool IsGoingToAppliance { get { return lure == Lure.Appliance; } }
+    public bool IsGoingToNoise { get { return lure == Lure.Noise; } }
+
+    // A sound (stone, whistle, laugh). run = slightly faster walk (laugh).
+    public void HearNoise(Vector3 pos, float radius, bool run = false)
     {
-        if (!enabled || currentState != EnemyState.Searching) return;
-        if (agent == null) agent = GetComponent<NavMeshAgent>();
-        if (agent == null) return;
+        if (!enabled) return;
         if (Vector3.Distance(transform.position, pos) > radius) return;
-        if (!agent.enabled || !agent.isOnNavMesh) return;
-        if (wander != null && wander.enabled) wander.GoTo(pos);
-        else agent.SetDestination(pos);
+
+        switch (currentState)
+        {
+            case EnemyState.Chasing:
+                return; // busy running after someone: completely ignored
+            case EnemyState.Attacking:
+            case EnemyState.OpeningSpot:
+                RememberNoise(pos, run); // finish the stab / opening first, then go there
+                return;
+            case EnemyState.MovingToSpot:
+                AbandonSpot(); // only walking to the spot: forget it and go to the sound
+                break;
+        }
+
+        if (lure == Lure.Appliance) { RememberNoise(pos, run); return; } // switch the TV / vacuum off first
+        StartNoiseLure(pos, run); // replaces any older sound he was walking to
+    }
+
+    // The TV or vacuum switched on. switchOff is called when he reaches it. Returns true if he heard it.
+    public bool HearAppliance(MonoBehaviour source, Vector3 switchOffPos, float radius, System.Action switchOff)
+    {
+        if (Vector3.Distance(transform.position, switchOffPos) > radius) return false;
+
+        pendingNoise = false; // whatever sound he was going to check is cancelled
+        if (enabled && currentState == EnemyState.MovingToSpot) AbandonSpot(); // only walking to a spot: go to the appliance
+        if (enabled && currentState == EnemyState.Searching)
+        {
+            StartApplianceLure(source, switchOffPos, switchOff);
+        }
+        else
+        {
+            // chasing / killing / checking a spot / still in the elevator: do it right after
+            pendingApplianceSource = source;
+            pendingAppliancePos = switchOffPos;
+            pendingApplianceSwitchOff = switchOff;
+        }
+        return true;
+    }
+
+    // The TV / vacuum went off by itself (or someone else switched it off): forget about it.
+    public void ApplianceEnded(MonoBehaviour source)
+    {
+        if (pendingApplianceSource == source) ClearPendingAppliance();
+        if (lure == Lure.Appliance && lureSource == source)
+        {
+            EndLure();
+            if (wander != null) wander.CancelNoise();
+        }
+    }
+
+    // He was only walking towards a hiding spot (not opening it yet): drop it and go back to searching.
+    void AbandonSpot()
+    {
+        currentState = EnemyState.Searching;
+        targetSpot = null;
+        agent.speed = patrolSpeed;
+        agent.isStopped = false;
+        if (wander != null) wander.enabled = true;
+    }
+
+    void RememberNoise(Vector3 pos, bool run)
+    {
+        pendingNoise = true;
+        pendingNoisePos = pos;
+        pendingNoiseRun = run;
+    }
+
+    void ClearPendingAppliance()
+    {
+        pendingApplianceSource = null;
+        pendingApplianceSwitchOff = null;
+    }
+
+    bool WalkTo(Vector3 pos, float giveUpTime)
+    {
+        if (agent == null) agent = GetComponent<NavMeshAgent>();
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh) return false;
+        agent.isStopped = false;
+        if (wander != null && wander.enabled) return wander.GoTo(pos, giveUpTime);
+        NavMeshHit hit;
+        if (!NavMesh.SamplePosition(pos, out hit, 3f, NavMesh.AllAreas)) return false;
+        return agent.SetDestination(hit.position);
+    }
+
+    void StartNoiseLure(Vector3 pos, bool run)
+    {
+        if (!WalkTo(pos, noiseGiveUpTime)) return;
+        pendingNoise = false; // an older remembered sound is replaced by this one
+        lure = Lure.Noise;
+        lurePos = pos;
+        lureSource = null;
+        lureSwitchOff = null;
+        runningToNoise = run;
+        agent.speed = run ? patrolSpeed + laughSpeedBonus : patrolSpeed;
+    }
+
+    void StartApplianceLure(MonoBehaviour source, Vector3 pos, System.Action switchOff)
+    {
+        if (!WalkTo(pos, applianceGiveUpTime)) { pendingApplianceSource = source; pendingAppliancePos = pos; pendingApplianceSwitchOff = switchOff; return; }
+        ClearPendingAppliance();
+        lure = Lure.Appliance;
+        lurePos = pos;
+        lureSource = source;
+        lureSwitchOff = switchOff;
+        runningToNoise = false;
+        agent.speed = patrolSpeed;
+    }
+
+    void EndLure()
+    {
+        lure = Lure.None;
+        lureSource = null;
+        lureSwitchOff = null;
+        runningToNoise = false;
+        if (agent != null) agent.speed = patrolSpeed;
+    }
+
+    // Leaving Searching (chase / spot check): stop walking to the sound or appliance, keep the appliance for later.
+    void SuspendLure(bool dropNoises)
+    {
+        if (lure == Lure.Appliance && lureSource != null && pendingApplianceSource == null)
+        {
+            pendingApplianceSource = lureSource;
+            pendingAppliancePos = lurePos;
+            pendingApplianceSwitchOff = lureSwitchOff;
+        }
+        else if (lure == Lure.Noise && !dropNoises && !pendingNoise)
+        {
+            RememberNoise(lurePos, runningToNoise);
+        }
+        if (dropNoises) pendingNoise = false;
+        EndLure();
+        if (wander != null) wander.CancelNoise();
+    }
+
+    // Called every frame while searching: finish the current lure, then pick up anything remembered.
+    void UpdateLures()
+    {
+        if (lure != Lure.None)
+        {
+            bool done = wander != null && wander.enabled
+                ? !wander.HasNoise
+                : (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.4f);
+            if (done)
+            {
+                Lure finished = lure;
+                System.Action off = lureSwitchOff;
+                Vector3 p = lurePos;
+                EndLure();
+                if (finished == Lure.Appliance && off != null && FlatDistance(transform.position, p) <= switchOffDistance) off();
+            }
+        }
+
+        if (lure == Lure.None)
+        {
+            if (pendingApplianceSource != null)
+            {
+                if (!pendingApplianceSource.isActiveAndEnabled) ClearPendingAppliance();
+                else StartApplianceLure(pendingApplianceSource, pendingAppliancePos, pendingApplianceSwitchOff);
+            }
+            else if (pendingNoise)
+            {
+                pendingNoise = false;
+                StartNoiseLure(pendingNoisePos, pendingNoiseRun);
+            }
+        }
     }
 
     public Hider CurrentTarget
@@ -117,6 +312,7 @@ public class EnemyVision : MonoBehaviour
     // ---------- Searching ----------
     void UpdateSearching()
     {
+        UpdateLures();
         UpdateSearchAnimation();
 
         Hider seen = FindVisibleHider(true);
@@ -126,7 +322,8 @@ public class EnemyVision : MonoBehaviour
             return;
         }
 
-        // Randomly decide to check a nearby spot while patrolling
+        // Randomly decide to check a nearby spot while patrolling (not while he is going to a sound / appliance)
+        if (lure != Lure.None) return;
         randomSpotCheckTimer -= Time.deltaTime;
         if (randomSpotCheckTimer <= 0f)
         {
@@ -148,6 +345,7 @@ public class EnemyVision : MonoBehaviour
 
     void StartChase(Hider h)
     {
+        SuspendLure(true); // sounds heard before the chase are forgotten, the TV / vacuum is kept for later
         currentState = EnemyState.Chasing;
         target = h;
         lastKnownPosition = h.transform.position;
@@ -239,11 +437,13 @@ public class EnemyVision : MonoBehaviour
         agent.speed = patrolSpeed;
         agent.isStopped = false;
         if (wander != null) wander.enabled = true;
+        // anything remembered (TV / vacuum first, then the latest sound) is picked up by UpdateLures next frame
     }
 
     // ---------- Spot Investigating ----------
     void StartInvestigatingSpot(HidingSpot spot, bool running)
     {
+        SuspendLure(false); // a sound he was walking to is remembered for after the check
         currentState = EnemyState.MovingToSpot;
         targetSpot = spot;
 
@@ -425,7 +625,7 @@ public class EnemyVision : MonoBehaviour
         if (animator == null) return;
         float currentSpeed = agent.velocity.magnitude;
         if (!string.IsNullOrEmpty(speedFloatName)) animator.SetFloat(speedFloatName, currentSpeed);
-        if (!string.IsNullOrEmpty(runBoolName)) animator.SetBool(runBoolName, false);
+        if (!string.IsNullOrEmpty(runBoolName)) animator.SetBool(runBoolName, false); // walks to sounds, never runs
     }
 
     void UpdateChaseAnimation()

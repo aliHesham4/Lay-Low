@@ -51,14 +51,16 @@ public class VacuumDistraction : MonoBehaviour
         if (vacuumAudio != null) vacuumAudio.Play();
         if (outline != null) outline.SetVisible(true);
 
+        // The killer comes to switch it off: right away if he is wandering or going to a sound,
+        // after he finishes if he is chasing / killing / checking a hiding spot.
+        Vector3 destination = turnOffPosition != null ? turnOffPosition.position : transform.position;
         foreach (EnemyVision enemy in FindObjectsByType<EnemyVision>(FindObjectsSortMode.None))
         {
-            if (Vector3.Distance(transform.position, enemy.transform.position) > attentionRadius) continue;
-            NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
-            if (agent == null) continue;
-            agent.SetDestination(turnOffPosition != null ? turnOffPosition.position : transform.position);
-            respondingAgent = agent;
-            break;
+            if (enemy.HearAppliance(this, destination, attentionRadius, TurnOff))
+            {
+                respondingAgent = enemy.GetComponent<NavMeshAgent>();
+                break;
+            }
         }
     }
 
@@ -70,15 +72,14 @@ public class VacuumDistraction : MonoBehaviour
 
         if (respondingAgent != null)
         {
+            EnemyVision ev = respondingAgent.GetComponent<EnemyVision>();
+            if (ev != null && !ev.IsGoingToAppliance) return; // only switches off when he actually came for it
+
             Vector3 targetPos = turnOffPosition != null ? turnOffPosition.position : transform.position;
             Vector3 agentPos = respondingAgent.transform.position;
             targetPos.y = agentPos.y;
 
-            if (Vector3.Distance(agentPos, targetPos) <= 1f)
-            {
-                if (respondingAgent.isActiveAndEnabled && respondingAgent.isOnNavMesh) respondingAgent.ResetPath();
-                TurnOff();
-            }
+            if (Vector3.Distance(agentPos, targetPos) <= 1f) TurnOff();
         }
     }
 
@@ -91,6 +92,10 @@ public class VacuumDistraction : MonoBehaviour
         if (vacuumAudio != null) vacuumAudio.Stop();
         if (outline != null) outline.SetVisible(false);
 
-        if (wasOn) DistractionGate.Ended();
+        if (wasOn)
+        {
+            DistractionGate.Ended();
+            foreach (EnemyVision enemy in FindObjectsByType<EnemyVision>(FindObjectsSortMode.None)) enemy.ApplianceEnded(this);
+        }
     }
 }

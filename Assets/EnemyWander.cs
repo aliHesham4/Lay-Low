@@ -13,18 +13,36 @@ public class EnemyWander : MonoBehaviour
     // Heard a noise: walk there first, then carry on wandering
     private bool hasNoise;
     private float noiseTimeout;
+    private Vector3 noiseTarget;
 
-    public void GoTo(Vector3 p)
+
+    public bool HasNoise { get { return hasNoise; } }
+
+    public bool GoTo(Vector3 p) { return GoTo(p, 20f); }
+
+    public bool GoTo(Vector3 p, float giveUpAfter)
     {
         if (agent == null) agent = GetComponent<NavMeshAgent>();
         NavMeshHit hit;
-        if (agent == null || !agent.isOnNavMesh) return;
+        if (agent == null || !agent.isOnNavMesh) return false;
         if (NavMesh.SamplePosition(p, out hit, 3f, NavMesh.AllAreas))
         {
             hasNoise = true;
-            noiseTimeout = Time.time + 20f;
+            noiseTimeout = Time.time + giveUpAfter;
+            noiseTarget = hit.position;
             agent.SetDestination(hit.position);
+            return true;
         }
+        return false;
+    }
+
+    // Forget the sound he was walking to and go back to normal wandering.
+    public void CancelNoise()
+    {
+        if (!hasNoise) return;
+        hasNoise = false;
+        timer = 0f;
+        if (agent != null && agent.isOnNavMesh) SetNewDestination(); // stop walking to the old sound
     }
 
     void Start()
@@ -46,7 +64,8 @@ public class EnemyWander : MonoBehaviour
 
         if (hasNoise)
         {
-            bool arrived = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.4f;
+            Vector3 d = noiseTarget - transform.position; d.y = 0f;
+            bool arrived = d.magnitude <= agent.stoppingDistance + 0.6f; // real distance, not the (possibly stale) path length
             if (arrived || Time.time > noiseTimeout) { hasNoise = false; timer = 0f; }
             else return; // keep walking to the noise
         }

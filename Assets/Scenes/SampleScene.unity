@@ -1708,8 +1708,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.0588924, y: 1, z: 0.9656849}
-  m_Center: {x: 0.18210548, y: 0, z: -0.26079273}
+  m_Size: {x: 1.4857491, y: 1, z: 1.1711817}
+  m_Center: {x: 0.39553386, y: 0, z: -0.15804434}
 --- !u!1001 &86053410
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11859,8 +11859,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1.3, z: 1}
-  m_Center: {x: -0.5, y: 0.65, z: 0}
+  m_Size: {x: 0.7537904, y: 1.3, z: 0.61146784}
+  m_Center: {x: 0.06965661, y: 0.65, z: 0.024374723}
 --- !u!4 &472596815 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: dc9d107696e042f44939328166841135, type: 3}
@@ -26401,6 +26401,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::HeartbeatMonitor
   calmDistance: 9
   panicDistance: 2
+  useWalkingDistance: 1
+  wallPenalty: 2
+  pathInterval: 0.25
+  eyeHeight: 0.4
+  wallMask:
+    serializedVersion: 2
+    m_Bits: 256
   panicCurve: 2.5
   restBpm: 60
   maxBpm: 160
@@ -32611,14 +32618,18 @@ MonoBehaviour:
   eyePoint: {fileID: 1723706435}
   patrolSpeed: 2
   chaseSpeed: 3
+  laughSpeedBonus: 0.2
   loseSightTime: 3
   repathInterval: 0.15
-  attackRange: 0.7
+  attackRange: 0.5
   attackDuration: 2
-  randomSearchChance: 35
+  randomSearchChance: 30
   sureSearchChance: 99
   openSpotTriggerName: OpenSpot
   openAnimationDuration: 1.5
+  noiseGiveUpTime: 20
+  applianceGiveUpTime: 45
+  switchOffDistance: 1.5
   speedFloatName: Speed
   runBoolName: IsRunning
   stabTriggerName: Stab
@@ -35195,6 +35206,7 @@ GameObject:
   - component: {fileID: 1623164795}
   - component: {fileID: 1623164797}
   - component: {fileID: 1623164796}
+  - component: {fileID: 1623164798}
   m_Layer: 0
   m_Name: Player2
   m_TagString: Player
@@ -35432,6 +35444,23 @@ MonoBehaviour:
   hornSound: {fileID: 0}
   hearingRadius: 40
   hornVolume: 1
+--- !u!114 &1623164798
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623164787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c52a375846511eb42bad49a38aa583bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AIFeatherBehaviour
+  enemy: {fileID: 1494911843}
+  otherPlayers:
+  - {fileID: 1152507904}
+  thinkTime: {x: 6, y: 16}
+  minKillerDistance: 6
 --- !u!4 &1624660948 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 43d2ab6c982ce1941af9990d2604e8b4, type: 3}
@@ -36391,6 +36420,7 @@ MonoBehaviour:
   collectiblePrefabs:
   - {fileID: 7046931272860732009, guid: 45ef89980323bcc4fa59e0205780b8de, type: 3}
   - {fileID: 7046931272860732009, guid: 20d40cf11e365824eab3bfbb4d95805b, type: 3}
+  - {fileID: 7046931272860732009, guid: f8b5fb4d5f9284d48a25aea66f735998, type: 3}
   instantPrefabs:
   - {fileID: 7046931272860732009, guid: 79e46d60e94fba1439e3975846c5e07c, type: 3}
   instantChance: 0.3
@@ -36399,6 +36429,7 @@ MonoBehaviour:
   maxItemsOnMap: 3
   maxInstantsInMap: 2
   maxWhistlesInMap: 1
+  maxFeathersInMap: 1
   instantLayerName: Pepper
 --- !u!1001 &1683948543
 PrefabInstance:

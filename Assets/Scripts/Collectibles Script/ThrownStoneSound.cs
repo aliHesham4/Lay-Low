@@ -5,25 +5,21 @@ public class ThrownStoneSound : MonoBehaviour
 {
     public AudioClip impactSound;
     public float attentionRadius = 15f;
+    bool alerted;
+
 
     void OnCollisionEnter(Collision collision)
     {
         // Play impact sound
         AudioSource.PlayClipAtPoint(impactSound, transform.position, 1f);
 
-        // Alert nearby enemies
-        EnemyVision[] enemies = FindObjectsByType<EnemyVision>(FindObjectsSortMode.None);
-        foreach (EnemyVision enemy in enemies)
+        // Alert the killer once (first impact). He decides himself whether to go:
+        // ignored while chasing, remembered while killing / checking a spot, followed while wandering.
+        if (!alerted)
         {
-            if (Vector3.Distance(transform.position, enemy.transform.position) <= attentionRadius)
-            {
-                // Force enemy to investigate the sound position
-                NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
-                if (agent != null)
-                {
-                    agent.SetDestination(transform.position);
-                }
-            }
+            alerted = true;
+            foreach (EnemyVision enemy in FindObjectsByType<EnemyVision>(FindObjectsSortMode.None))
+                enemy.HearNoise(transform.position, attentionRadius);
         }
 
         // Destroy stone object after impact

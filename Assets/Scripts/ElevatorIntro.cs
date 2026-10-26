@@ -73,14 +73,22 @@ public class ElevatorIntro : MonoBehaviour
             if (!closing && enemy.position.z < closeAtZ) { closing = true; StartCoroutine(Slide(false, openDuration)); }
             yield return null;
         }
-        if (anim) anim.SetFloat("Speed", 0f);
-
+        // Hand him over to the NavMesh agent without a visible hitch:
+        // - don't snap his transform to the NavMesh height (the agent keeps his feet where they are via its base offset)
+        // - don't drop the walk animation to idle for a frame
+        // - keep his walking momentum so he doesn't stall and re-accelerate
         NavMeshHit hit;
         Vector3 p = NavMesh.SamplePosition(exitPoint, out hit, 2f, NavMesh.AllAreas) ? hit.position : exitPoint;
-        enemy.position = p;
         SetEnemyActive(true);
         var agent = enemy.GetComponent<NavMeshAgent>();
-        if (agent) agent.Warp(p);
+        if (agent)
+        {
+            agent.Warp(p);
+            // On the warp frame Unity puts the transform ON the NavMesh, without the (negative) base offset,
+            // which made him pop ~0.4 m up for one frame. Place him at his real foot height ourselves.
+            enemy.position = p + Vector3.up * agent.baseOffset * enemy.lossyScale.y;
+            agent.velocity = (exitPoint - insidePoint).normalized * walkSpeed;
+        }
         // He goes back to normal: wandering and searching, and chases only when he spots someone.
     }
 }

@@ -118,4 +118,42 @@ public class PlayerHUD : MonoBehaviour
         ClearAllSlots();
         if (bagIcon != null) bagIcon.gameObject.SetActive(false);
     }
+
+    // ---- feather: pick this player by clicking his card ----
+    RectTransform cardRect;
+    GameObject tickleHighlight;
+
+    public RectTransform CardRect
+    {
+        get
+        {
+            if (cardRect == null && bagIcon != null && bagIcon.transform.parent != null && bagIcon.transform.parent.parent != null)
+            {
+                Transform c = bagIcon.transform.parent.parent.Find("HUDCard");
+                if (c != null) cardRect = c as RectTransform;
+            }
+            return cardRect;
+        }
+    }
+
+    public void SetTickleHighlight(bool on)
+    {
+        RectTransform card = CardRect;
+        if (card == null) return;
+        if (tickleHighlight == null)
+        {
+            if (!on) return;
+            tickleHighlight = new GameObject("TickleHighlight", typeof(RectTransform), typeof(Image), typeof(Outline));
+            tickleHighlight.transform.SetParent(card, false);
+            RectTransform r = (RectTransform)tickleHighlight.transform;
+            r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.offsetMin = r.offsetMax = Vector2.zero;
+            Image img = tickleHighlight.GetComponent<Image>();
+            img.color = new Color(1f, 0.9f, 0.1f, 0.25f);
+            img.raycastTarget = false;
+            Outline o = tickleHighlight.GetComponent<Outline>();
+            o.effectColor = new Color(1f, 0.9f, 0.1f, 1f);
+            o.effectDistance = new Vector2(4f, -4f);
+        }
+        tickleHighlight.SetActive(on);
+    }
 }
