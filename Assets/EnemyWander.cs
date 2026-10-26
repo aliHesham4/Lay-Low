@@ -9,6 +9,8 @@ public class EnemyWander : MonoBehaviour
     private NavMeshAgent agent;
     private Animator animator; // 1. Added Animator reference
     private float timer;
+    private EnemyVision vision;
+
 
     // Heard a noise: walk there first, then carry on wandering
     private bool hasNoise;
@@ -49,6 +51,7 @@ public class EnemyWander : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponentInChildren<Animator>(); // Finds Animator on this or child mesh
+        vision = GetComponent<EnemyVision>();
         timer = waitTime;
         SetNewDestination();
     }
@@ -56,7 +59,8 @@ public class EnemyWander : MonoBehaviour
     void Update()
     {
         // 2. Pass current agent speed to the Animator (normalized 0 to 1)
-        if (animator != null)
+        // EnemyVision drives the killer's animator (with real speeds); writing a different Speed here made the walk blend flicker
+        if (animator != null && vision == null)
         {
             float speed = agent.velocity.magnitude / agent.speed;
             animator.SetFloat("Speed", speed);

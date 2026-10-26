@@ -79,6 +79,8 @@ public class EnemyVision : MonoBehaviour
     private float openingTimer;
     private float randomSpotCheckTimer;
     private Dictionary<HidingSpot, float> checkedSpots = new Dictionary<HidingSpot, float>();
+    private bool spotRunning; // rushing to the spot a chased player just hid in
+
 
     // ---------- Distractions ----------
     // Sounds (stone, whistle, laugh): only followed while he is wandering. Chasing = ignored.
@@ -449,6 +451,7 @@ public class EnemyVision : MonoBehaviour
 
         if (wander != null) wander.enabled = false;
 
+        spotRunning = running;
         agent.speed = running ? chaseSpeed : patrolSpeed;
         agent.isStopped = false;
         agent.SetDestination(spot.GetApproachPoint());
@@ -456,7 +459,12 @@ public class EnemyVision : MonoBehaviour
 
     void UpdateMovingToSpot()
     {
-        UpdateSearchAnimation(); // Uses walk/run based on current speed
+        // Keep running if he is rushing to the spot the player just hid in, otherwise walk
+        if (animator != null)
+        {
+            if (!string.IsNullOrEmpty(speedFloatName)) animator.SetFloat(speedFloatName, spotRunning ? Mathf.Max(agent.velocity.magnitude, chaseSpeed * 0.5f) : agent.velocity.magnitude);
+            if (!string.IsNullOrEmpty(runBoolName)) animator.SetBool(runBoolName, spotRunning);
+        }
 
         // If he sees someone else running around while walking to the spot, chase them instead!
         Hider seen = FindVisibleHider(true);
