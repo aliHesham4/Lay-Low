@@ -64,6 +64,28 @@ public class DistractionOutline : MonoBehaviour
             mr.receiveShadows = false;
             masks.Add(g);
         }
+
+        // animated (skinned) meshes, e.g. the alarm clock: a skinned copy that shares the same bones
+        foreach (SkinnedMeshRenderer r in boundsRoot.GetComponentsInChildren<SkinnedMeshRenderer>(false))
+        {
+            if (!r.enabled || r.sharedMesh == null || r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly) continue;
+
+            GameObject g = new GameObject("OutlineMask");
+            g.layer = layer;
+            g.transform.SetParent(r.transform, false);
+            SkinnedMeshRenderer sr = g.AddComponent<SkinnedMeshRenderer>();
+            sr.sharedMesh = r.sharedMesh;
+            sr.bones = r.bones;
+            sr.rootBone = r.rootBone;
+            sr.localBounds = r.localBounds;
+            sr.updateWhenOffscreen = true;
+            Material[] mats = new Material[r.sharedMesh.subMeshCount];
+            for (int i = 0; i < mats.Length; i++) mats[i] = maskMaterial;
+            sr.sharedMaterials = mats;
+            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            sr.receiveShadows = false;
+            masks.Add(g);
+        }
     }
 
     void ClearMasks()

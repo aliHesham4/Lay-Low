@@ -29,6 +29,8 @@ public class ItemSpawner : MonoBehaviour
     public int maxWhistlesInMap = 1;
     [Tooltip("Maximum feathers lying on the map at the same time.")]
     public int maxFeathersInMap = 1;
+    [Tooltip("Maximum door locks lying on the map at the same time.")]
+    public int maxDoorLocksInMap = 1;
     [Tooltip("Layer given to instants so they are easy to recognise.")]
     public string instantLayerName = "Pepper";
 
@@ -52,7 +54,8 @@ public class ItemSpawner : MonoBehaviour
     {
         return GameObject.FindGameObjectsWithTag("CollectibleStone").Length +
                FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None).Length +
-               FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None).Length;
+               FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None).Length +
+               FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None).Length;
     }
     int CountInstants() { return FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None).Length; }
 
@@ -86,6 +89,16 @@ public class ItemSpawner : MonoBehaviour
             prefab = others[Random.Range(0, others.Count)];
         }
 
+        // limit door locks the same way
+        if (prefab.GetComponent<DoorLockCollectible>() != null &&
+            FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None).Length >= maxDoorLocksInMap)
+        {
+            var others = new System.Collections.Generic.List<GameObject>();
+            foreach (GameObject g in pool) if (g != null && g.GetComponent<DoorLockCollectible>() == null && g.GetComponent<FeatherCollectible>() == null && g.GetComponent<WhistleCollectible>() == null) others.Add(g);
+            if (others.Count == 0) return;
+            prefab = others[Random.Range(0, others.Count)];
+        }
+
         Transform point = PickFreePoint();
         if (point == null) return;
         lastPoint = point;
@@ -106,6 +119,7 @@ public class ItemSpawner : MonoBehaviour
         PepperCollectible[] peppers = FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None);
         WhistleCollectible[] whistles = FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None);
         FeatherCollectible[] feathers = FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None);
+        DoorLockCollectible[] locks = FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None);
         Hider[] players = FindObjectsByType<Hider>(FindObjectsSortMode.None);
         var free = new System.Collections.Generic.List<Transform>();
         foreach (Transform p in spawnPoints)
@@ -123,6 +137,9 @@ public class ItemSpawner : MonoBehaviour
             if (!blocked)
                 foreach (FeatherCollectible fc in feathers)
                     if (Vector3.Distance(fc.transform.position, p.position) < 2f) { blocked = true; break; }
+            if (!blocked)
+                foreach (DoorLockCollectible lc in locks)
+                    if (Vector3.Distance(lc.transform.position, p.position) < 2f) { blocked = true; break; }
             if (!blocked)
                 foreach (Hider h in players)
                     if (Vector3.Distance(h.transform.position, p.position) < 2.5f) { blocked = true; break; }

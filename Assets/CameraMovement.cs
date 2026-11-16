@@ -10,6 +10,8 @@ public class CameraSwitcher : MonoBehaviour
     public CinemachineCamera tpvCamera;
 
     private bool isFirstPerson = true;
+    public bool IsFirstPerson { get { return isFirstPerson; } }
+
 
     void Start()
     {

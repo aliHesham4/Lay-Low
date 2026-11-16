@@ -197,7 +197,7 @@ public class AIStoneBehaviour : MonoBehaviour
             if (Vector3.Distance(a, b) <= pickupDistance)
             {
                 // a whistle grabs itself (WhistleCollectible); only rocks are picked up here
-                if (targetStone.GetComponent<WhistleCollectible>() == null && targetStone.GetComponent<FeatherCollectible>() == null) PickUp(targetStone);
+                if (targetStone.GetComponent<WhistleCollectible>() == null && targetStone.GetComponent<FeatherCollectible>() == null && targetStone.GetComponent<DoorLockCollectible>() == null) PickUp(targetStone);
             }
             else if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
             {
@@ -263,6 +263,18 @@ public class AIStoneBehaviour : MonoBehaviour
                 if (HumanNear(fc.transform.position)) continue;
                 if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, fc.transform.position) < killerNearItemRadius) continue;
                 bestDist = d; best = fc.gameObject;
+            }
+        }
+        DoorLockHolder dl = GetComponent<DoorLockHolder>();
+        if (dl == null || !dl.HasLock)
+        {
+            foreach (DoorLockCollectible lc in FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None))
+            {
+                float d = Vector3.Distance(transform.position, lc.transform.position);
+                if (d >= bestDist) continue;
+                if (HumanNear(lc.transform.position)) continue;
+                if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, lc.transform.position) < killerNearItemRadius) continue;
+                bestDist = d; best = lc.gameObject;
             }
         }
         return best;
