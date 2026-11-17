@@ -10,6 +10,10 @@ public class HidingSpot : MonoBehaviour
     [Tooltip("Uncheck this for bathtubs so the player mesh stays visible inside.")]
     public bool hidePlayerMesh = true;
 
+    [Header("VFX")]
+    [Tooltip("Cartoon dust particle system (can be a child object in the scene or a prefab).")]
+    public ParticleSystem hideDustVFX;
+
     [Header("Bathtub Settings (Laying Down)")]
     public bool layFlatInside = false;
     [Tooltip("Move everyone lying here up (+) or down (-) in the tub, in metres.")]
@@ -68,7 +72,7 @@ public class HidingSpot : MonoBehaviour
         if (hideCamera != null) hideCamera.SetActive(false);
     }
 
-[Header("On-screen prompt (Press H)")]
+    [Header("On-screen prompt (Press H)")]
     [Tooltip("Optional. Where the prompt floats. Defaults to just above the trigger box.")]
     public Transform promptAnchor;
 
@@ -137,6 +141,9 @@ public class HidingSpot : MonoBehaviour
     {
         if (h == null || h.IsCaught || occupant != null) return false;
 
+        // Trigger dust at the hider's feet BEFORE teleporting them to insidePoint
+        PlayHideDust(h.transform.position);
+
         occupant = h;
         h.SetHidden(true, hidePlayerMesh);
 
@@ -174,6 +181,26 @@ public class HidingSpot : MonoBehaviour
         }
         if (fridge != null) fridge.PlayEnter();
         return true;
+    }
+
+    void PlayHideDust(Vector3 footPosition)
+    {
+        if (hideDustVFX == null) return;
+
+        Vector3 spawnPos = footPosition + Vector3.up * 0.2f;
+
+        if (hideDustVFX.gameObject.scene.IsValid())
+        {
+            hideDustVFX.transform.position = spawnPos;
+            hideDustVFX.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            hideDustVFX.Play();
+        }
+        else
+        {
+            ParticleSystem burst = Instantiate(hideDustVFX, spawnPos, Quaternion.identity);
+            burst.Play();
+            Destroy(burst.gameObject, burst.main.duration + burst.main.startLifetime.constantMax);
+        }
     }
 
     public void Exit(Hider h)
