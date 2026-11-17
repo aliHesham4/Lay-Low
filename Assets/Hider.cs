@@ -90,33 +90,78 @@ public class Hider : MonoBehaviour
         if (IsCaught) return;
         IsCaught = true;
 
-        // Turn off the physical collider so the enemy walks right over the body
-        Collider myCollider = GetComponent<Collider>();
-        if (myCollider != null) myCollider.enabled = false;
-
         if (health != null)
         {
-            health.Die();   // stops movement and plays the Die animation
+            health.Die(); // stops movement and plays the Die animation
         }
-        else
+
+        // Always disable movement, CharacterController, and NavMeshAgent (even when health != null)
+        // so living players cannot push the body and the NavMeshAgent stops holding it above the floor.
+        if (movement != null) movement.enabled = false;
+        if (controller != null) controller.enabled = false;
+
+        if (agent != null)
         {
-            if (movement != null) movement.enabled = false;
-
-            if (controller != null) controller.enabled = false;
-
-            if (agent != null && agent.enabled)
+            if (agent.enabled && agent.isOnNavMesh)
             {
                 agent.isStopped = true;
                 agent.velocity = Vector3.zero;
-                agent.enabled = false;
             }
-            if (animator != null)
+            agent.enabled = false;
+        }
+
+        AIHider aiHider = GetComponent<AIHider>();
+        if (aiHider != null) aiHider.enabled = false;
+
+        // Turn off all solid colliders on root and children so players pass right through without pushing
+        foreach (Collider col in GetComponentsInChildren<Collider>())
+        {
+            if (!col.isTrigger) col.enabled = false;
+        }
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+
+        if (animator != null)
+        {
+            animator.applyRootMotion = false;
+            animator.speed = 1f;
+            animator.SetFloat("Speed", 0f);
+        }
+
+        SnapBodyToFloor();
+
+        if (RoundManager.Instance != null) RoundManager.Instance.ReportCaught(this);
+    }
+
+    void SnapBodyToFloor()
+    {
+        Vector3 origin = transform.position + Vector3.up * 0.5f;
+        RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, 2f, ~0, QueryTriggerInteraction.Ignore);
+
+        float closestDist = float.MaxValue;
+        float floorY = transform.position.y;
+        bool foundFloor = false;
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.transform.IsChildOf(transform)) continue;
+            if (hit.transform.GetComponentInParent<Hider>() != null) continue;
+            if (hit.transform.GetComponentInParent<EnemyVision>() != null) continue;
+
+            if (hit.distance < closestDist)
             {
-                animator.speed = 1f;
-                animator.SetFloat("Speed", 0f);
+                closestDist = hit.distance;
+                floorY = hit.point.y;
+                foundFloor = true;
             }
         }
 
-        if (RoundManager.Instance != null) RoundManager.Instance.ReportCaught(this);
+        if (foundFloor)
+        {
+            Vector3 pos = transform.position;
+            pos.y = floorY;
+            transform.position = pos;
+        }
     }
 }

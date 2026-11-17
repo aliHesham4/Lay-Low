@@ -646,4 +646,54 @@ public class EnemyVision : MonoBehaviour
             animator.SetFloat(speedFloatName, effectiveSpeed);
         }
     }
+    void OnDrawGizmosSelected()
+    {
+        Vector3 origin = eyePoint != null ? eyePoint.position : transform.position;
+
+        // 1. Cyan dot = eyePoint origin
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawSphere(origin, 0.08f);
+
+        // 2. Red fan = forward vision cone (clips against obstacleMask walls)
+        int rayCount = 24;
+        float halfAngle = viewAngle * 0.5f;
+        Vector3 prevPoint = origin;
+
+        for (int i = 0; i <= rayCount; i++)
+        {
+            float currentAngle = -halfAngle + (viewAngle * i / rayCount);
+            Vector3 dir = Quaternion.Euler(0f, currentAngle, 0f) * transform.forward;
+
+            float dist = viewDistance;
+            if (Physics.Raycast(origin, dir, out RaycastHit hit, viewDistance, obstacleMask))
+                dist = hit.distance;
+
+            Vector3 endPoint = origin + dir * dist;
+
+            if (i == 0 || i == rayCount)
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(origin, endPoint);
+            }
+
+            if (i > 0)
+            {
+                Gizmos.color = new Color(1f, 0.2f, 0.2f, 0.85f);
+                Gizmos.DrawLine(prevPoint, endPoint);
+            }
+
+            prevPoint = endPoint;
+        }
+
+        // 3. Play Mode sightlines to hiders (Green = seen, Gray = blocked/out of angle)
+        if (Application.isPlaying && hiders != null)
+        {
+            foreach (Hider h in hiders)
+            {
+                if (h == null || h.IsHidden || h.IsCaught) continue;
+                Gizmos.color = CanSee(h, true) ? Color.green : Color.gray;
+                Gizmos.DrawLine(origin, h.transform.position + Vector3.up * targetHeightOffset);
+            }
+        }
+    }
 }

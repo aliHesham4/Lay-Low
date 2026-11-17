@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.coplaydev.unity-mcp": {
-      "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#v10.2.0",
+      "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity",
       "depth": 0,
       "source": "git",
       "dependencies": {
@@ -15,7 +15,7 @@
         "com.unity.nuget.newtonsoft-json": "3.0.2",
         "com.unity.test-framework": "1.1.31"
       },
-      "hash": "30d22075093d1d35dfb0091c1c7550e9ad948577"
+      "hash": "19b66ecef4ac3a9be22a7a62ea21accb975c39e7"
     },
     "com.unity.ai.navigation": {
       "version": "2.0.14",
