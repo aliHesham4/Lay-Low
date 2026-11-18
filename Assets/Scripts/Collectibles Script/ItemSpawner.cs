@@ -34,7 +34,15 @@ public class ItemSpawner : MonoBehaviour
     [Tooltip("Layer given to instants so they are easy to recognise.")]
     public string instantLayerName = "Pepper";
 
-    private Transform lastPoint;
+    [Header("Spreading out")]
+    [Tooltip("New items prefer points at least this far from the items already lying around.")]
+    public float itemSpacing = 5f;
+    [Tooltip("Points used for the last few drops are skipped, so items move around the house.")]
+    public int rememberLastPoints = 4;
+    [Tooltip("Each drop lands up to this far from its spawn point (on the floor), so spots vary.")]
+    public float jitterRadius = 0.7f;
+
+    private readonly System.Collections.Generic.Queue<Transform> recentPoints = new System.Collections.Generic.Queue<Transform>();
 
     void Start()
     {
@@ -99,11 +107,10 @@ public class ItemSpawner : MonoBehaviour
             prefab = others[Random.Range(0, others.Count)];
         }
 
-        Transform point = PickFreePoint();
-        if (point == null) return;
-        lastPoint = point;
+        Vector3 spawnPos;
+        if (!PickSpawnPosition(out spawnPos)) return;
 
-        GameObject item = Instantiate(prefab, point.position, Quaternion.identity);
+        GameObject item = Instantiate(prefab, spawnPos, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
         if (instant)
         {
             int layer = LayerMask.NameToLayer(instantLayerName);
@@ -111,41 +118,65 @@ public class ItemSpawner : MonoBehaviour
         }
     }
 
-    // A random spawn point that is free: no item already there, nobody standing next to it, not the last one used
-    Transform PickFreePoint()
+    // A random free spot, preferring points far from the items already lying around so they stay spread out.
+    // Free = no item within itemSpacing, nobody standing next to it, not one of the last few points used.
+    // The drop is also nudged a little around the point so items don't always land on the exact same spot.
+    bool PickSpawnPosition(out Vector3 pos)
     {
-        if (spawnPoints == null || spawnPoints.Length == 0) return null;
-        GameObject[] stones = GameObject.FindGameObjectsWithTag("CollectibleStone");
-        PepperCollectible[] peppers = FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None);
-        WhistleCollectible[] whistles = FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None);
-        FeatherCollectible[] feathers = FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None);
-        DoorLockCollectible[] locks = FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None);
+        pos = Vector3.zero;
+        if (spawnPoints == null || spawnPoints.Length == 0) return false;
+
+        var items = new System.Collections.Generic.List<Vector3>();
+        foreach (GameObject st in GameObject.FindGameObjectsWithTag("CollectibleStone")) items.Add(st.transform.position);
+        foreach (PepperCollectible c in FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
+        foreach (WhistleCollectible c in FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
+        foreach (FeatherCollectible c in FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
+        foreach (DoorLockCollectible c in FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
         Hider[] players = FindObjectsByType<Hider>(FindObjectsSortMode.None);
+
         var free = new System.Collections.Generic.List<Transform>();
-        foreach (Transform p in spawnPoints)
+        var weights = new System.Collections.Generic.List<float>();
+        // if the house is too full for the spacing, accept closer spots rather than spawning nothing
+        for (float spacing = itemSpacing; spacing >= 2f && free.Count == 0; spacing -= 1f)
         {
-            if (p == null || p == lastPoint) continue;
-            bool blocked = false;
-            foreach (GameObject st in stones)
-                if (Vector3.Distance(st.transform.position, p.position) < 2f) { blocked = true; break; }
-            if (!blocked)
-                foreach (PepperCollectible pc in peppers)
-                    if (Vector3.Distance(pc.transform.position, p.position) < 2f) { blocked = true; break; }
-            if (!blocked)
-                foreach (WhistleCollectible wc in whistles)
-                    if (Vector3.Distance(wc.transform.position, p.position) < 2f) { blocked = true; break; }
-            if (!blocked)
-                foreach (FeatherCollectible fc in feathers)
-                    if (Vector3.Distance(fc.transform.position, p.position) < 2f) { blocked = true; break; }
-            if (!blocked)
-                foreach (DoorLockCollectible lc in locks)
-                    if (Vector3.Distance(lc.transform.position, p.position) < 2f) { blocked = true; break; }
-            if (!blocked)
+            foreach (Transform p in spawnPoints)
+            {
+                if (p == null || recentPoints.Contains(p)) continue;
+                float nearestItem = 99f;
+                foreach (Vector3 it in items) nearestItem = Mathf.Min(nearestItem, Flat(it, p.position));
+                if (nearestItem < spacing) continue;
+                bool blocked = false;
                 foreach (Hider h in players)
                     if (Vector3.Distance(h.transform.position, p.position) < 2.5f) { blocked = true; break; }
-            if (!blocked) free.Add(p);
+                if (blocked) continue;
+                free.Add(p);
+                // farther from the other items = more likely (squared, so it clearly favours spreading out)
+                float w = items.Count == 0 ? 1f : Mathf.Min(nearestItem, 12f);
+                weights.Add(w * w);
+            }
         }
-        if (free.Count == 0) return null;
-        return free[Random.Range(0, free.Count)];
+        if (free.Count == 0) return false;
+
+        float total = 0f;
+        foreach (float w in weights) total += w;
+        float r = Random.value * total;
+        Transform pick = free[free.Count - 1];
+        for (int i = 0; i < free.Count; i++) { r -= weights[i]; if (r <= 0f) { pick = free[i]; break; } }
+
+        recentPoints.Enqueue(pick);
+        while (recentPoints.Count > Mathf.Min(rememberLastPoints, spawnPoints.Length - 1)) recentPoints.Dequeue();
+
+        pos = pick.position;
+        if (jitterRadius > 0f)
+        {
+            Vector2 j = Random.insideUnitCircle * jitterRadius;
+            UnityEngine.AI.NavMeshHit hit;
+            if (UnityEngine.AI.NavMesh.SamplePosition(pos + new Vector3(j.x, 0f, j.y), out hit, 0.5f, UnityEngine.AI.NavMesh.AllAreas) &&
+                Flat(hit.position, pos) <= jitterRadius + 0.1f)
+                pos = new Vector3(hit.position.x, pick.position.y, hit.position.z); // keep the point's height
+        }
+        return true;
     }
+
+    static float Flat(Vector3 a, Vector3 b) { a.y = 0f; b.y = 0f; return Vector3.Distance(a, b); }
 }

@@ -28,6 +28,7 @@ public class AIWhistleBehaviour : MonoBehaviour
     NavMeshAgent agent;
     WhistleHolder holder;
     AIStoneBehaviour stones;
+    AICollectibleSeeker seeker;
     float thinkTimer;
     float giveUpTimer;
     float repathTimer;
@@ -40,6 +41,7 @@ public class AIWhistleBehaviour : MonoBehaviour
         hider = GetComponent<Hider>();
         agent = GetComponent<NavMeshAgent>();
         stones = GetComponent<AIStoneBehaviour>();
+        seeker = GetComponent<AICollectibleSeeker>();
         if (enemy == null) enemy = ai.enemy;
     }
 
@@ -68,13 +70,15 @@ public class AIWhistleBehaviour : MonoBehaviour
     {
         thinkTimer -= Time.deltaTime;
         if (thinkTimer > 0f) return;
-        if (stones != null && stones.Busy) return;
-        if (!ai.IsWandering || ai.InDanger) return;
+        if ((stones != null && stones.Busy) || (seeker != null && seeker.Busy)) return;
+        if (ai.InDanger || ai.externalControl) return;
+        if (!ai.IsWandering && !ai.IsHiddenNow) return;
         if (KillerDist() < minKillerDistance) return;
 
         victim = NearestHuman();
         if (victim == null) { thinkTimer = 3f; return; }
 
+        if (ai.IsHiddenNow) ai.LeaveHidingSpot(); // she sneaks out of her spot to set someone up
         mode = Mode.Approaching;
         giveUpTimer = giveUpAfter;
         repathTimer = 0f;

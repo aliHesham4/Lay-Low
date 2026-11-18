@@ -2,10 +2,11 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
-// Lets the AI hider (Player 2) pick up stones and use them in one of two ways:
+// Handles picking up stones when within reach and using them in one of two ways:
 //  1. EXPOSE: throw it near another player so the killer goes to that spot.
 //  2. DECOY:  when the killer is close (and not chasing her), throw it away from herself
 //             so he walks off to investigate the noise.
+// (Map-wide seeking is handled centrally by AICollectibleSeeker.)
 [RequireComponent(typeof(AIHider))]
 public class AIStoneBehaviour : MonoBehaviour
 {
@@ -16,24 +17,14 @@ public class AIStoneBehaviour : MonoBehaviour
     public GameObject stonePrefab;
     [Tooltip("Optional. Where the stone leaves her hand. Defaults to a point in front of her chest.")]
     public Transform hand;
-
     [Tooltip("Her on-screen HUD (bag icon). Found automatically if left empty.")]
     public PlayerHUD playerHUD;
 
-    [Header("Collecting")]
+    [Header("Pickup")]
     public string stoneTag = "CollectibleStone";
-    public float seekRadius = 60f;
     public float pickupDistance = 0.7f;
-    [Tooltip("Seconds between looking for a stone.")]
-    public float seekInterval = 1.5f;
-    [Tooltip("She won't look for stones during the first seconds of the game (min, max).")]
-    public Vector2 firstSeekDelay = new Vector2(1f, 4f);
-    [Range(0f, 1f)] [Tooltip("Chance she actually goes for a stone each time she notices one.")]
-    public float seekChance = 1f;
     [Tooltip("Seconds after a throw before she looks for another stone.")]
     public float cooldownAfterThrow = 12f;
-    [Tooltip("If a human player is this close to a stone she leaves it for them.")]
-    public float leaveForHumanRadius = 2f;
 
     [Header("Deciding")]
     [Tooltip("Seconds she 'thinks' after picking a stone up before using it.")]
@@ -62,15 +53,13 @@ public class AIStoneBehaviour : MonoBehaviour
     [Tooltip("Red target marker shown while she aims (like Player 1's blue one).")]
     public GameObject targetIndicator;
 
-    [Header("Instants (pepper...)")]
-    [Tooltip("While walking normally she grabs an instant item (pepper) that is this close. Collectibles come first.")]
-    public float instantGrabRadius = 2.5f;
-    [Tooltip("She will not go for a collectible that lies this close to the killer.")]
-    public float killerNearItemRadius = 5f;
-    [Tooltip("She drops the idea of a collectible when the killer gets this close to HER.")]
-    public float abortCollectDistance = 8f;
+    [Header("House Bounds")]
+    [Tooltip("Parent of the house boundary colliders. Found automatically by name 'SpaceLimit' if empty.")]
+    public Transform spaceLimit;
+    [Tooltip("Aim points stay this far inside the walls.")]
+    public float wallMargin = 0.8f;
 
-    enum Mode { Idle, GoingToStone, GoingToInstant, Throwing }
+    enum Mode { Idle, Throwing }
     Mode mode = Mode.Idle;
 
     AIHider ai;
@@ -78,15 +67,16 @@ public class AIStoneBehaviour : MonoBehaviour
     NavMeshAgent agent;
     Animator animator;
     Collider ownCollider;
-    GameObject targetStone;
     bool hasStone;
-    float nextSeek;
     float thinkTimer;
-    PepperCollectible instantTarget;
-    float instantUntil;
+    float stoneCooldownUntil;
+
+    Bounds houseBounds;
+    bool hasHouseBounds;
 
     public bool HasStone { get { return hasStone; } }
     public bool Busy { get { return mode != Mode.Idle; } }
+    public bool OnSeekCooldown { get { return Time.time < stoneCooldownUntil; } }
 
     void Start()
     {
@@ -95,126 +85,47 @@ public class AIStoneBehaviour : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
         ownCollider = GetComponent<Collider>();
+
         if (enemy == null) enemy = ai.enemy;
         if (playerHUD == null) playerHUD = GetComponent<PlayerHUD>();
         if (hand == null)
             foreach (Transform t in GetComponentsInChildren<Transform>())
                 if (t.name.EndsWith("RightHand")) { hand = t; break; }
         if (targetIndicator != null) targetIndicator.SetActive(false);
-        nextSeek = Time.time + Random.Range(firstSeekDelay.x, firstSeekDelay.y);
     }
 
     void Update()
     {
-        if (hider.IsCaught) { Release(); return; }
-
-        if (hasStone && mode == Mode.GoingToStone) Release();
-
-        // Goal: get a stone. While one lies on the map and she has none, collecting beats idle hiding,
-        // and she even leaves her hiding spot for it when the killer is not around.
-        bool stoneOnMap = !hasStone && GameObject.FindGameObjectWithTag(stoneTag) != null;
-        ai.suppressIdleHide = stoneOnMap;
-        if (stoneOnMap && ai.IsHiddenNow && enemy != null &&
-            Vector3.Distance(transform.position, enemy.transform.position) > 9f)
-            ai.LeaveHidingSpot();
-
-        if (HandleInstants(stoneOnMap)) return;
-
-        if (!hasStone && TryPickUpNearbyStone()) return;
-
-        if (!hasStone) UpdateCollecting();
-        else UpdateDeciding();
-    }
-
-    // ---------------- Instants (pepper) ----------------
-    // Collectibles are her goal. An instant is only picked up when it is right next to her path.
-    // Returns true while she is detouring to one.
-    bool HandleInstants(bool stoneWanted)
-    {
-        if (mode == Mode.GoingToInstant)
+        if (hider.IsCaught)
         {
-            if (instantTarget == null || ai.InDanger || hider.IsCaught || Time.time > instantUntil) { Release(); return false; }
-            return true;
-        }
-        if (mode != Mode.Idle || !ai.IsWandering || ai.InDanger) return false;
-
-        // wanting a collectible comes first: then only grab an instant she practically touches
-        float radius = (!hasStone && stoneWanted) ? 1.2f : instantGrabRadius;
-        PepperCollectible best = null; float bestDist = radius;
-        foreach (PepperCollectible pc in FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None))
-        {
-            float d = Vector3.Distance(transform.position, pc.transform.position);
-            if (d < bestDist) { bestDist = d; best = pc; }
-        }
-        if (best == null) return false;
-
-        instantTarget = best;
-        instantUntil = Time.time + 4f;
-        mode = Mode.GoingToInstant;
-        ai.externalControl = true;
-        agent.isStopped = false;
-        agent.speed = ai.wanderSpeed;
-        MoveTo(best.transform.position);
-        return true;
-    }
-
-    // ---------------- Collecting ----------------
-    void UpdateCollecting()
-    {
-        if (mode == Mode.Idle)
-        {
-            if (Time.time < nextSeek || !ai.IsWandering || ai.InDanger) return;
-            // not worth the risk while the killer is close to her
-            if (enemy != null && enemy.enabled && Vector3.Distance(transform.position, enemy.transform.position) < abortCollectDistance) return;
-            nextSeek = Time.time + seekInterval;
-            if (Random.value > seekChance) return;
-
-            GameObject stone = FindNearestStone();
-            if (stone == null) return;
-
-            targetStone = stone;
-            mode = Mode.GoingToStone;
-            ai.externalControl = true;
-            agent.isStopped = false;
-            agent.speed = ai.wanderSpeed;
-            MoveTo(stone.transform.position);
+            if (mode != Mode.Idle) Release();
             return;
         }
 
-        if (mode == Mode.GoingToStone)
-        {
-            // Someone else took it, or the killer showed up: forget it
-            if (targetStone == null || ai.InDanger) { Release(); return; }
-            if (enemy != null && enemy.enabled && Vector3.Distance(transform.position, enemy.transform.position) < abortCollectDistance)
-            {
-                nextSeek = Time.time + 3f;
-                Release();
-                return;
-            }
+        if (!hasStone && TryPickUpNearbyStone()) return;
 
-            Vector3 a = transform.position, b = targetStone.transform.position;
-            a.y = 0f; b.y = 0f;
-            if (Vector3.Distance(a, b) <= pickupDistance)
-            {
-                // a whistle grabs itself (WhistleCollectible); only rocks are picked up here
-                if (targetStone.GetComponent<WhistleCollectible>() == null && targetStone.GetComponent<FeatherCollectible>() == null && targetStone.GetComponent<DoorLockCollectible>() == null) PickUp(targetStone);
-            }
-            else if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
-            {
-                Release(); // could not get any closer
-            }
-        }
+        if (hasStone) UpdateDeciding();
     }
 
-    // She grabs any stone she touches, even if she was not heading for it
+    // ---------------- Pickup ----------------
+    // Grabs any stone she steps close to (whether AICollectibleSeeker walked her there or she passed by it)
     bool TryPickUpNearbyStone()
     {
         if (ai.IsHiddenNow || mode == Mode.Throwing) return false;
-        foreach (GameObject s in GameObject.FindGameObjectsWithTag(stoneTag))
+        GameObject[] stones;
+        try { stones = GameObject.FindGameObjectsWithTag(stoneTag); }
+        catch (UnityException) { return false; }
+
+        foreach (GameObject s in stones)
         {
+            if (s == null || !s.activeInHierarchy) continue;
             Vector3 a = transform.position, b = s.transform.position;
             a.y = 0f; b.y = 0f;
-            if (Vector3.Distance(a, b) <= pickupDistance) { PickUp(s); return true; }
+            if (Vector3.Distance(a, b) <= pickupDistance)
+            {
+                PickUp(s);
+                return true;
+            }
         }
         return false;
     }
@@ -222,84 +133,21 @@ public class AIStoneBehaviour : MonoBehaviour
     void PickUp(GameObject stone)
     {
         if (stone != null) Destroy(stone);
-        targetStone = null;
         hasStone = true;
         thinkTimer = Random.Range(thinkTime.x, thinkTime.y);
         if (playerHUD != null) playerHUD.ShowStoneInBag();
-        Release();
-    }
-
-    GameObject FindNearestStone()
-    {
-        GameObject best = null;
-        float bestDist = seekRadius;
-        foreach (GameObject s in GameObject.FindGameObjectsWithTag(stoneTag))
-        {
-            float d = Vector3.Distance(transform.position, s.transform.position);
-            if (d >= bestDist) continue;
-            if (HumanNear(s.transform.position)) continue; // leave it for the player
-            if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, s.transform.position) < killerNearItemRadius) continue; // killer is right there
-            bestDist = d; best = s;
-        }
-        WhistleHolder wh = GetComponent<WhistleHolder>();
-        if (wh == null || !wh.HasWhistle)
-        {
-            foreach (WhistleCollectible w in FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None))
-            {
-                float d = Vector3.Distance(transform.position, w.transform.position);
-                if (d >= bestDist) continue;
-                if (HumanNear(w.transform.position)) continue;
-                if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, w.transform.position) < killerNearItemRadius) continue;
-                bestDist = d; best = w.gameObject;
-            }
-        }
-        FeatherHolder fh = GetComponent<FeatherHolder>();
-        if (fh == null || !fh.HasFeather)
-        {
-            foreach (FeatherCollectible fc in FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None))
-            {
-                float d = Vector3.Distance(transform.position, fc.transform.position);
-                if (d >= bestDist) continue;
-                if (HumanNear(fc.transform.position)) continue;
-                if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, fc.transform.position) < killerNearItemRadius) continue;
-                bestDist = d; best = fc.gameObject;
-            }
-        }
-        DoorLockHolder dl = GetComponent<DoorLockHolder>();
-        if (dl == null || !dl.HasLock)
-        {
-            foreach (DoorLockCollectible lc in FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None))
-            {
-                float d = Vector3.Distance(transform.position, lc.transform.position);
-                if (d >= bestDist) continue;
-                if (HumanNear(lc.transform.position)) continue;
-                if (enemy != null && enemy.enabled && Vector3.Distance(enemy.transform.position, lc.transform.position) < killerNearItemRadius) continue;
-                bestDist = d; best = lc.gameObject;
-            }
-        }
-        return best;
-    }
-
-    bool HumanNear(Vector3 p)
-    {
-        if (otherPlayers == null) return false;
-        foreach (Hider h in otherPlayers)
-            if (h != null && h != hider && h.isHumanControlled && !h.IsCaught &&
-                Vector3.Distance(h.transform.position, p) < leaveForHumanRadius) return true;
-        return false;
     }
 
     // ---------------- Deciding what to do with the stone ----------------
-    // She keeps the stone until the moment is right:
-    //  - killer close (and not chasing her)  -> throw it far away so he leaves
-    //  - otherwise, after holding it a while -> throw it at the human player's position (hidden or not)
     void UpdateDeciding()
     {
         if (mode == Mode.Throwing) return;
 
         thinkTimer -= Time.deltaTime;
         if (thinkTimer > 0f) return;
-        if (!ai.IsWandering) return; // no throwing from a hiding spot, or while running to one
+        // she may throw while out, or step out of her hiding spot to throw (not while running to one)
+        bool fromHiding = ai.IsHiddenNow;
+        if (!ai.IsWandering && !fromHiding) return;
         if (enemy == null) return;
 
         float killerDist = Vector3.Distance(transform.position, enemy.transform.position);
@@ -313,6 +161,7 @@ public class AIStoneBehaviour : MonoBehaviour
             away.y = 0f;
             if (away.sqrMagnitude < 0.01f) away = transform.forward;
             Vector3 aim = transform.position + away.normalized * Mathf.Min(maxThrowDistance, killerDist + decoyDistance);
+            if (fromHiding) { thinkTimer = 1.5f; return; } // he is near: stepping out now would be suicide
             BeginThrow(PickFarSpot(SnapToFloor(aim)));
             return;
         }
@@ -325,6 +174,7 @@ public class AIStoneBehaviour : MonoBehaviour
             {
                 Vector2 jitter = Random.insideUnitCircle * 0.8f;
                 Vector3 aim = victim.transform.position + new Vector3(jitter.x, 0f, jitter.y);
+                if (fromHiding) ai.LeaveHidingSpot();
                 BeginThrow(SnapToFloor(aim));
                 return;
             }
@@ -339,17 +189,20 @@ public class AIStoneBehaviour : MonoBehaviour
         StartCoroutine(Throw(target));
     }
 
-    // The human player, wherever they are (hidden or not)
     Hider PickExposeTarget()
     {
+        // the player (human or AI) in throwing range that the killer is closest to, so the noise brings
+        // him onto them; never someone right next to her, or he would come for her as well
         Hider best = null;
-        float bestDist = maxThrowDistance;
+        float bestScore = float.MaxValue;
         if (otherPlayers == null) return null;
         foreach (Hider h in otherPlayers)
         {
             if (h == null || h == hider || h.IsCaught) continue;
             float d = Vector3.Distance(transform.position, h.transform.position);
-            if (d < bestDist) { bestDist = d; best = h; }
+            if (d > maxThrowDistance || d < 4f) continue;
+            float score = enemy != null ? Vector3.Distance(enemy.transform.position, h.transform.position) : d;
+            if (score < bestScore) { bestScore = score; best = h; }
         }
         return best;
     }
@@ -363,14 +216,12 @@ public class AIStoneBehaviour : MonoBehaviour
         agent.ResetPath();
         agent.velocity = Vector3.zero;
 
-        // Turn to face the target (the model, not the root, should face it)
         Vector3 dir = target - transform.position;
         dir.y = 0f;
         Quaternion face = dir.sqrMagnitude > 0.01f
             ? Quaternion.LookRotation(dir.normalized) * Quaternion.Euler(0f, -ai.ModelYaw, 0f)
             : transform.rotation;
-        // Targeting: she looks around first, then the red marker drifts slowly onto the target,
-        // wobbles while she makes up her mind, and finally settles before she throws.
+
         Vector3 markerStart = SnapToFloor(transform.position);
         Vector3 side = Vector3.Cross(Vector3.up, (target - markerStart).normalized);
         if (targetIndicator != null) { targetIndicator.transform.position = markerStart + Vector3.up * 0.05f; targetIndicator.SetActive(true); }
@@ -382,7 +233,7 @@ public class AIStoneBehaviour : MonoBehaviour
             t += Time.deltaTime;
             transform.rotation = Quaternion.Slerp(transform.rotation, face, Time.deltaTime * 4f);
             SetMarker(markerStart + side * Mathf.Sin(t * 5f) * 0.25f + (target - markerStart).normalized * 0.4f);
-            if (hider.IsCaught) { Release(); yield break; }
+            if (ShouldAbortThrow()) { Release(); yield break; }
             yield return null;
         }
 
@@ -396,7 +247,7 @@ public class AIStoneBehaviour : MonoBehaviour
             float wobble = Mathf.Sin(t * 4f) * 0.35f * (1f - k);
             transform.rotation = Quaternion.Slerp(transform.rotation, face, Time.deltaTime * 6f);
             SetMarker(Vector3.Lerp(markerStart, target, k) + side * wobble);
-            if (hider.IsCaught) { Release(); yield break; }
+            if (ShouldAbortThrow()) { Release(); yield break; }
             yield return null;
         }
 
@@ -408,11 +259,11 @@ public class AIStoneBehaviour : MonoBehaviour
             float shrink = 1f - Mathf.Clamp01(t / settleTime);
             SetMarker(target + side * Mathf.Sin(t * 9f) * 0.2f * shrink);
             transform.rotation = Quaternion.Slerp(transform.rotation, face, Time.deltaTime * 8f);
-            if (hider.IsCaught) { Release(); yield break; }
+            if (ShouldAbortThrow()) { Release(); yield break; }
             yield return null;
         }
         SetMarker(target);
-        if (targetIndicator != null) targetIndicator.SetActive(false); // confirm the throw
+        if (targetIndicator != null) targetIndicator.SetActive(false);
 
         if (animator != null && HasParameter(throwTriggerName)) animator.SetTrigger(throwTriggerName);
         yield return new WaitForSeconds(releaseDelay);
@@ -421,8 +272,8 @@ public class AIStoneBehaviour : MonoBehaviour
 
         Vector3 origin = hand != null ? hand.position : transform.position + Vector3.up * 0.6f + transform.forward * 0.2f;
         hasStone = false;
+        stoneCooldownUntil = Time.time + cooldownAfterThrow;
         if (playerHUD != null) playerHUD.EmptyBag();
-        nextSeek = Time.time + cooldownAfterThrow;
 
         if (stonePrefab != null)
         {
@@ -436,7 +287,6 @@ public class AIStoneBehaviour : MonoBehaviour
         Release();
     }
 
-    // Identical to Player 1's CalculateTrajectory
     Vector3 Trajectory(Vector3 origin, Vector3 target, float height)
     {
         float gravity = Physics.gravity.y;
@@ -457,14 +307,6 @@ public class AIStoneBehaviour : MonoBehaviour
     {
         if (targetIndicator != null) targetIndicator.transform.position = p + Vector3.up * 0.05f;
     }
-
-    // House limits, taken from the SpaceLimit walls (same boundary the players cannot leave)
-    [Tooltip("Parent of the house boundary colliders. Found automatically by name 'SpaceLimit' if empty.")]
-    public Transform spaceLimit;
-    [Tooltip("Aim points stay this far inside the walls.")]
-    public float wallMargin = 0.8f;
-    Bounds houseBounds;
-    bool hasHouseBounds;
 
     void BuildHouseBounds()
     {
@@ -494,7 +336,6 @@ public class AIStoneBehaviour : MonoBehaviour
         return p;
     }
 
-    // Aim points: pulled inside the house walls, onto the walkable floor, at real floor height
     Vector3 SnapToFloor(Vector3 p)
     {
         p = ClampInsideHouse(p);
@@ -505,7 +346,6 @@ public class AIStoneBehaviour : MonoBehaviour
         return p;
     }
 
-    // A far, walkable spot inside the house, away from her (used for the decoy)
     Vector3 PickFarSpot(Vector3 fallback)
     {
         Vector3 best = fallback; float bestScore = -1f; bool found = false;
@@ -514,8 +354,8 @@ public class AIStoneBehaviour : MonoBehaviour
             Vector2 r = Random.insideUnitCircle.normalized * Random.Range(8f, maxThrowDistance);
             Vector3 p = transform.position + new Vector3(r.x, 0f, r.y);
             NavMeshHit hit;
-            if (!NavMesh.SamplePosition(p, out hit, 1.2f, NavMesh.AllAreas)) continue; // not walkable
-            if (!InsideHouse(hit.position)) continue;                                  // outside the walls
+            if (!NavMesh.SamplePosition(p, out hit, 1.2f, NavMesh.AllAreas)) continue;
+            if (!InsideHouse(hit.position)) continue;
             float score = Vector3.Distance(hit.position, transform.position);
             if (enemy != null) score -= Vector3.Distance(hit.position, enemy.transform.position) * 0.3f;
             if (!found || score > bestScore) { found = true; bestScore = score; best = hit.position; }
@@ -532,30 +372,33 @@ public class AIStoneBehaviour : MonoBehaviour
         return target;
     }
 
-    void MoveTo(Vector3 p)
-    {
-        NavMeshHit hit;
-        if (NavMesh.SamplePosition(p, out hit, 1.5f, NavMesh.AllAreas)) agent.SetDestination(hit.position);
-    }
-
     bool HasParameter(string name)
     {
+        if (animator == null) return false;
         foreach (AnimatorControllerParameter p in animator.parameters)
             if (p.name == name) return true;
         return false;
     }
 
-    // Hand control back to the normal AI hider behaviour
     void Release()
     {
         mode = Mode.Idle;
-        targetStone = null;
-        instantTarget = null;
         if (targetIndicator != null) targetIndicator.SetActive(false);
         if (ai != null)
         {
             if (ai.externalControl && agent != null && agent.enabled && agent.isOnNavMesh) agent.isStopped = false;
             ai.externalControl = false;
         }
+    }
+
+    bool ShouldAbortThrow()
+    {
+        if (hider.IsCaught || ai.InDanger) return true;
+        if (enemy != null && enemy.enabled)
+        {
+            if (enemy.CurrentTarget == hider) return true;
+            if (Vector3.Distance(transform.position, enemy.transform.position) < 5.5f) return true;
+        }
+        return false;
     }
 }

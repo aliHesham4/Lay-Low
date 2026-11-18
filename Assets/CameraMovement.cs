@@ -9,12 +9,15 @@ public class CameraSwitcher : MonoBehaviour
     public CinemachineCamera fpvCamera;
     public CinemachineCamera tpvCamera;
 
+    [Tooltip("Off = the game starts in the third-person group camera (V still switches).")]
+    public bool startInFirstPerson = false;
     private bool isFirstPerson = true;
     public bool IsFirstPerson { get { return isFirstPerson; } }
 
 
     void Start()
     {
+        isFirstPerson = startInFirstPerson;
         // Set initial camera priorities on game start
         UpdateCameraPriorities();
     }

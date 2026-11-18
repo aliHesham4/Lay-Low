@@ -14,6 +14,14 @@ public class DistractionOutline : MonoBehaviour
     [Range(0f, 1f)] public float fillAlpha = 0.12f;
     public Material maskMaterial;      // Custom/DistractionMask
     public Material outlineMaterial;   // Custom/DistractionOutlineUI
+    [Tooltip("Outlines on different layers are drawn separately, each with its own thickness / fill / opacity.")]
+    public string layerName = DistractionOutlineSystem.LayerName;
+    [Range(0f, 1f)] public float opacity = 1f;
+    [Range(0f, 1f)] [Tooltip("Per-object strength on top of the group opacity (used to fade a single outline).")]
+    public float fade = 1f;
+
+    [Tooltip("Extra meshes to outline that are not under Bounds Root (e.g. a fridge whose model sits elsewhere).")]
+    public List<MeshRenderer> extraRenderers = new List<MeshRenderer>();
 
     readonly List<GameObject> masks = new List<GameObject>();
     bool visible;
@@ -35,7 +43,8 @@ public class DistractionOutline : MonoBehaviour
         else
         {
             ClearMasks();
-            if (DistractionOutlineSystem.Instance != null) DistractionOutlineSystem.Instance.Remove(this);
+            DistractionOutlineSystem s = DistractionOutlineSystem.Find(layerName);
+            if (s != null) s.Remove(this);
         }
     }
 
@@ -43,10 +52,12 @@ public class DistractionOutline : MonoBehaviour
     {
         ClearMasks();
         if (boundsRoot == null) boundsRoot = transform;
-        int layer = LayerMask.NameToLayer(DistractionOutlineSystem.LayerName);
+        int layer = LayerMask.NameToLayer(layerName);
         if (layer < 0 || maskMaterial == null) return;
 
-        foreach (MeshRenderer r in boundsRoot.GetComponentsInChildren<MeshRenderer>(false))
+        List<MeshRenderer> meshes = new List<MeshRenderer>(boundsRoot.GetComponentsInChildren<MeshRenderer>(false));
+        foreach (MeshRenderer er in extraRenderers) if (er != null && !meshes.Contains(er)) meshes.Add(er);
+        foreach (MeshRenderer r in meshes)
         {
             if (!r.enabled || r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly) continue;
             MeshFilter mf = r.GetComponent<MeshFilter>();
@@ -62,6 +73,7 @@ public class DistractionOutline : MonoBehaviour
             mr.sharedMaterials = mats;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mr.receiveShadows = false;
+            Tint(mr);
             masks.Add(g);
         }
 
@@ -84,8 +96,34 @@ public class DistractionOutline : MonoBehaviour
             sr.sharedMaterials = mats;
             sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             sr.receiveShadows = false;
+            Tint(sr);
             masks.Add(g);
         }
+    }
+
+    // each object's mask carries its own outline colour, so several colours can show at once
+    void Tint(Renderer r)
+    {
+        var block = new MaterialPropertyBlock();
+        Color c = color; c.a = fade;
+        block.SetColor("_Color", c);
+        r.SetPropertyBlock(block);
+    }
+
+    // fade just this outline (0 = gone, 1 = full) while it is showing
+    public void SetFade(float f)
+    {
+        f = Mathf.Clamp01(f);
+        if (Mathf.Abs(f - fade) < 0.01f) return;
+        fade = f;
+        foreach (GameObject g in masks) if (g != null) { Renderer r = g.GetComponent<Renderer>(); if (r != null) Tint(r); }
+    }
+
+    // change the colour while it is showing
+    public void SetColor(Color c)
+    {
+        color = c;
+        foreach (GameObject g in masks) if (g != null) { Renderer r = g.GetComponent<Renderer>(); if (r != null) Tint(r); }
     }
 
     void ClearMasks()
@@ -97,7 +135,8 @@ public class DistractionOutline : MonoBehaviour
     void OnDestroy()
     {
         ClearMasks();
-        if (DistractionOutlineSystem.Instance != null) DistractionOutlineSystem.Instance.Remove(this);
+        DistractionOutlineSystem s = DistractionOutlineSystem.Find(layerName);
+        if (s != null) s.Remove(this);
     }
 }
 
@@ -106,7 +145,14 @@ public class DistractionOutline : MonoBehaviour
 public class DistractionOutlineSystem : MonoBehaviour
 {
     public const string LayerName = "DistractionOutline";
-    public static DistractionOutlineSystem Instance;
+    static readonly Dictionary<string, DistractionOutlineSystem> systems = new Dictionary<string, DistractionOutlineSystem>();
+    public static DistractionOutlineSystem Instance { get { return Find(LayerName); } }
+    public static DistractionOutlineSystem Find(string layerName)
+    {
+        DistractionOutlineSystem s;
+        return layerName != null && systems.TryGetValue(layerName, out s) && s != null ? s : null;
+    }
+    string groupLayer;
 
     readonly List<DistractionOutline> targets = new List<DistractionOutline>();
     Camera cam;
@@ -118,22 +164,25 @@ public class DistractionOutlineSystem : MonoBehaviour
 
     public static DistractionOutlineSystem Get(DistractionOutline from)
     {
-        if (Instance != null) return Instance;
-        GameObject go = new GameObject("DistractionOutlineSystem");
-        Instance = go.AddComponent<DistractionOutlineSystem>();
-        Instance.Init(from);
-        return Instance;
+        DistractionOutlineSystem s = Find(from.layerName);
+        if (s != null) return s;
+        GameObject go = new GameObject("DistractionOutlineSystem (" + from.layerName + ")");
+        s = go.AddComponent<DistractionOutlineSystem>();
+        systems[from.layerName] = s;
+        s.Init(from);
+        return s;
     }
 
     void Init(DistractionOutline from)
     {
-        layer = LayerMask.NameToLayer(LayerName);
+        groupLayer = from.layerName;
+        layer = LayerMask.NameToLayer(from.layerName);
 
         GameObject cg = new GameObject("OutlineMaskCamera");
         cg.transform.SetParent(transform, false);
         cam = cg.AddComponent<Camera>();
         cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = Color.black;
+        cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
         cam.cullingMask = 1 << layer;
         cam.allowHDR = false;
         cam.allowMSAA = false;
@@ -201,7 +250,8 @@ public class DistractionOutlineSystem : MonoBehaviour
 
         DistractionOutline first = targets[0];
         float pulse = 0.85f + 0.15f * Mathf.Sin(Time.unscaledTime * 6f);
-        uiMat.SetColor("_Color", first.color);
+        Color col = first.color; col.a = first.opacity;
+        uiMat.SetColor("_Color", col);
         uiMat.SetFloat("_Width", first.thickness * (Screen.height / 1080f) * pulse + 1f);
         uiMat.SetFloat("_Fill", first.fillAlpha * pulse);
 
@@ -212,6 +262,6 @@ public class DistractionOutlineSystem : MonoBehaviour
     void OnDestroy()
     {
         if (rt != null) { rt.Release(); Destroy(rt); }
-        if (Instance == this) Instance = null;
+        if (groupLayer != null && Find(groupLayer) == this) systems.Remove(groupLayer);
     }
 }

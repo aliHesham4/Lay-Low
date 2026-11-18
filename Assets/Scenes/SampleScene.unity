@@ -3834,7 +3834,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: -3852341972610935857, guid: 9de5a690a0adaea4c848aaa4c5173859, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 484807935}
   m_SourcePrefab: {fileID: 100100000, guid: 9de5a690a0adaea4c848aaa4c5173859, type: 3}
 --- !u!4 &107661684 stripped
 Transform:
@@ -11818,7 +11821,7 @@ GameObject:
   m_Component:
   - component: {fileID: 330315558}
   - component: {fileID: 330315554}
-  - component: {fileID: 330315557}
+  - component: {fileID: 330315560}
   - component: {fileID: 330315559}
   m_Layer: 0
   m_Name: CM_ThirdPerson
@@ -11840,8 +11843,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
   Priority:
-    Enabled: 0
-    m_Value: 0
+    Enabled: 1
+    m_Value: 20
   OutputChannel: 1
   StandbyUpdate: 2
   m_StreamingVersion: 20241001
@@ -11870,32 +11873,6 @@ MonoBehaviour:
       BarrelClipping: 0.25
       Anamorphism: 0
   BlendHint: 0
---- !u!114 &330315557
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 330315553}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 625c14eee3ad46c99df7c7c891ef668a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineThirdPersonFollow
-  Damping: {x: 0.1, y: 0.5, z: 0.3}
-  ShoulderOffset: {x: 0.5, y: 1.97, z: 0}
-  VerticalArmLength: 1.45
-  CameraSide: 1
-  CameraDistance: 4
-  AvoidObstacles:
-    Enabled: 0
-    CollisionFilter:
-      serializedVersion: 2
-      m_Bits: 1
-    IgnoreTag: 
-    CameraRadius: 0.2
-    DampingIntoCollision: 0
-    DampingFromCollision: 0.5
 --- !u!4 &330315558
 Transform:
   m_ObjectHideFlags: 0
@@ -11904,8 +11881,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330315553}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.021410748, y: 0.93694633, z: -0.34390497, w: 0.05833217}
-  m_LocalPosition: {x: 6.88, y: 3.959, z: 7.94}
+  m_LocalRotation: {x: 0.034050863, y: 0.9077024, z: -0.4114285, w: 0.075123735}
+  m_LocalPosition: {x: 6.88, y: 4.009, z: 6.94}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11924,6 +11901,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineHardLookAt
   LookAtOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &330315560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330315553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 625c14eee3ad46c99df7c7c891ef668a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineThirdPersonFollow
+  Damping: {x: 0.1, y: 0.5, z: 0.3}
+  ShoulderOffset: {x: 0.5, y: 1.97, z: 0}
+  VerticalArmLength: 1.5
+  CameraSide: 1
+  CameraDistance: 3
+  AvoidObstacles:
+    Enabled: 0
+    CollisionFilter:
+      serializedVersion: 2
+      m_Bits: 1
+    IgnoreTag: 
+    CameraRadius: 0.2
+    DampingIntoCollision: 0
+    DampingFromCollision: 0.5
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -11983,7 +11986,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.05
+  near clip plane: 0.3
   far clip plane: 1000
   field of view: 60.000004
   orthographic: 0
@@ -12011,8 +12014,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
-  m_LocalPosition: {x: 7.38, y: 0.881, z: 3.64}
+  m_LocalRotation: {x: 0.034050863, y: 0.9077024, z: -0.4114285, w: 0.075123735}
+  m_LocalPosition: {x: 6.88, y: 4.009, z: 6.94}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -16391,6 +16394,33 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1d95cdcb3b4b3184ca8a7177e9565a07, type: 3}
   m_PrefabInstance: {fileID: 1597080356}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &484807931 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -3852341972610935857, guid: 9de5a690a0adaea4c848aaa4c5173859, type: 3}
+  m_PrefabInstance: {fileID: 107638050}
+  m_PrefabAsset: {fileID: 0}
+--- !u!64 &484807935
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 484807931}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -6281424698479989189, guid: 9de5a690a0adaea4c848aaa4c5173859, type: 3}
 --- !u!1 &490265435
 GameObject:
   m_ObjectHideFlags: 0
@@ -19649,6 +19679,150 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -4890990073563579795, guid: 57cfc4523467bdc4aa671b55048f739a, type: 3}
+--- !u!1 &613202571
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 613202576}
+  - component: {fileID: 613202575}
+  - component: {fileID: 613202574}
+  - component: {fileID: 613202573}
+  - component: {fileID: 613202572}
+  m_Layer: 0
+  m_Name: CM_Spectator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &613202572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 613202571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 709af64788dbd3542a9daa9fda6c9b48, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpectatorCamera
+  delayAfterCaught: 2.5
+  livePriority: 100
+--- !u!114 &613202573
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 613202571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4eb4843bae7d24943842ea23130dcd55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineGroupFraming
+  FramingMode: 2
+  FramingSize: 0.75
+  CenterOffset: {x: 0, y: 0}
+  Damping: 2
+  SizeAdjustment: 1
+  LateralAdjustment: 0
+  FovRange: {x: 1, y: 100}
+  DollyRange: {x: -3, y: 12}
+  OrthoSizeRange: {x: 1, y: 1000}
+--- !u!114 &613202574
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 613202571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 886251e9a18ece04ea8e61686c173e1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachinePositionComposer
+  CameraDistance: 11
+  DeadZoneDepth: 0
+  Composition:
+    ScreenPosition: {x: 0, y: 0}
+    DeadZone:
+      Enabled: 0
+      Size: {x: 0.2, y: 0.2}
+    HardLimits:
+      Enabled: 0
+      Size: {x: 0.8, y: 0.8}
+      Offset: {x: 0, y: 0}
+  CenterOnActivate: 1
+  TargetOffset: {x: 0, y: 0, z: 0}
+  Damping: {x: 1, y: 1, z: 1}
+  Lookahead:
+    Enabled: 0
+    Time: 0
+    Smoothing: 0
+    IgnoreY: 0
+--- !u!114 &613202575
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 613202571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
+  Priority:
+    Enabled: 1
+    m_Value: 0
+  OutputChannel: 1
+  StandbyUpdate: 2
+  m_StreamingVersion: 20241001
+  m_LegacyPriority: 0
+  Target:
+    TrackingTarget: {fileID: 1830503092}
+    LookAtTarget: {fileID: 0}
+    CustomLookAtTarget: 0
+  Lens:
+    FieldOfView: 40
+    OrthographicSize: 10
+    NearClipPlane: 0.1
+    FarClipPlane: 5000
+    Dutch: 0
+    ModeOverride: 0
+    PhysicalProperties:
+      GateFit: 2
+      SensorSize: {x: 21.946, y: 16.002}
+      LensShift: {x: 0, y: 0}
+      FocusDistance: 10
+      Iso: 200
+      ShutterSpeed: 0.005
+      Aperture: 16
+      BladeCount: 5
+      Curvature: {x: 2, y: 11}
+      BarrelClipping: 0.25
+      Anamorphism: 0
+  BlendHint: 0
+--- !u!4 &613202576
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 613202571}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.0000000211917, y: 0.8746197, z: -0.4848096, w: -0.00000003823084}
+  m_LocalPosition: {x: 0.0000005095972, y: 9.328529, z: 5.8291125}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &615403217
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -34466,8 +34640,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
   Priority:
-    Enabled: 0
-    m_Value: 0
+    Enabled: 1
+    m_Value: 10
   OutputChannel: 1
   StandbyUpdate: 2
   m_StreamingVersion: 20241001
@@ -35634,6 +35808,7 @@ GameObject:
   - component: {fileID: 1152507908}
   - component: {fileID: 1152507909}
   - component: {fileID: 1152507910}
+  - component: {fileID: 1152507911}
   m_Layer: 0
   m_Name: Player1
   m_TagString: Player
@@ -35655,6 +35830,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraSwitcher
   fpvCamera: {fileID: 1121084947}
   tpvCamera: {fileID: 330315554}
+  startInFirstPerson: 0
 --- !u!114 &1152507898
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -35951,6 +36127,28 @@ MonoBehaviour:
   bodyAnimator: {fileID: 1152507899}
   followSharpness: 8
   rollAmount: 0.6
+--- !u!114 &1152507911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1152507896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d61a1f7ff82e2645bae70045a8a681c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMarker
+  model: {fileID: 1836818394}
+  thickness: 3
+  fillAlpha: 0.35
+  highlightHidingSpot: 1
+  fadeStartDistance: 6
+  fadeEndDistance: 1.5
+  spotSearchRadius: 1
+  opacity: 0.75
+  maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
+  outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
 --- !u!4 &1161160486 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 84ea4c4e61b7e3145b2e9948c2748631, type: 3}
@@ -35985,7 +36183,7 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 1, g: 0.55, b: 0.22, a: 1}
-  m_Intensity: 1.1121203
+  m_Intensity: 1.0171443
   m_Range: 3.5
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -41562,6 +41760,10 @@ MonoBehaviour:
   fillAlpha: 0.12
   maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
   outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
+  layerName: DistractionOutline
+  opacity: 1
+  fade: 1
+  extraRenderers: []
 --- !u!82 &1368742218
 AudioSource:
   m_ObjectHideFlags: 0
@@ -42149,6 +42351,10 @@ MonoBehaviour:
   fillAlpha: 0.12
   maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
   outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
+  layerName: DistractionOutline
+  opacity: 1
+  fade: 1
+  extraRenderers: []
 --- !u!1 &1390021505 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 817942123732841904, guid: 754a9f8e1521e5949931b48963c07e4e, type: 3}
@@ -44854,6 +45060,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraSwitcher
   fpvCamera: {fileID: 1121084947}
   tpvCamera: {fileID: 330315554}
+  startInFirstPerson: 0
 --- !u!195 &1494911841
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -48124,6 +48331,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1623164788}
   - component: {fileID: 1623164789}
+  - component: {fileID: 1623164801}
   - component: {fileID: 1623164793}
   - component: {fileID: 1623164790}
   - component: {fileID: 1623164792}
@@ -48135,6 +48343,7 @@ GameObject:
   - component: {fileID: 1623164798}
   - component: {fileID: 1623164799}
   - component: {fileID: 1623164800}
+  - component: {fileID: 1623164802}
   m_Layer: 0
   m_Name: Player2
   m_TagString: Player
@@ -48212,14 +48421,16 @@ MonoBehaviour:
   wanderSpeed: 2
   fleeSpeed: 2.4
   wanderRadius: 5
-  wanderPause: 0.6
-  dangerDistance: 4
+  wanderPause: 0.8
+  dangerDistance: 6
   enterDistance: 0.1
-  hideTimeRange: {x: 6, y: 12}
+  hideTimeRange: {x: 4, y: 8}
   safeDistance: 6
-  idleHideDelayRange: {x: 25, y: 45}
+  idleHideDelayRange: {x: 10, y: 40}
+  idleHiding: 0
   panicDistance: 1
   panicChancePerSecond: 0.13
+  maxExtraHideTime: 6
   randomSpotVariety: 6
   speedFloatName: Speed
   externalControl: 0
@@ -48259,7 +48470,7 @@ NavMeshAgent:
   m_Height: 0.7
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
+  m_ObstacleAvoidanceType: 0
 --- !u!114 &1623164794
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -48280,17 +48491,12 @@ MonoBehaviour:
   hand: {fileID: 0}
   playerHUD: {fileID: 0}
   stoneTag: CollectibleStone
-  seekRadius: 60
   pickupDistance: 0.7
-  seekInterval: 1.5
-  firstSeekDelay: {x: 1, y: 4}
-  seekChance: 1
   cooldownAfterThrow: 12
-  leaveForHumanRadius: 1
-  thinkTime: {x: 6, y: 16}
+  thinkTime: {x: 3, y: 8}
   killerNearDistance: 6
   exposeMinKillerDistance: 5
-  exposeChance: 0.5
+  exposeChance: 0.65
   decoyDistance: 9
   arcHeight: 6
   maxThrowDistance: 15
@@ -48303,9 +48509,6 @@ MonoBehaviour:
   releaseDelay: 0.4
   throwTriggerName: Throw
   targetIndicator: {fileID: 225760214}
-  instantGrabRadius: 2
-  killerNearItemRadius: 5
-  abortCollectDistance: 6
   spaceLimit: {fileID: 511183696}
   wallMargin: 0.8
 --- !u!114 &1623164795
@@ -48350,7 +48553,7 @@ MonoBehaviour:
   otherPlayers:
   - {fileID: 1152507904}
   - {fileID: 2020514902}
-  thinkTime: {x: 5, y: 12}
+  thinkTime: {x: 2, y: 6}
   blowDistance: 4
   minKillerDistance: 7
   giveUpAfter: 30
@@ -48390,8 +48593,9 @@ MonoBehaviour:
   otherPlayers:
   - {fileID: 1152507904}
   - {fileID: 2020514902}
-  thinkTime: {x: 6, y: 16}
+  thinkTime: {x: 2, y: 6}
   minKillerDistance: 6
+  keepAwayFromMe: 4
 --- !u!114 &1623164799
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -48408,7 +48612,13 @@ MonoBehaviour:
   checkInterval: 0.25
   routeTolerance: 0.6
   keepClear: 0.6
-  dangerDistance: 6
+  dangerDistance: 4
+  sabotage: 1
+  trapKillerRadius: 5
+  trapDoorRadius: 5
+  sabotageSafeDistance: 6
+  sabotageChance: 0.75
+  sabotageRethink: 3
 --- !u!114 &1623164800
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -48426,6 +48636,61 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: 27be58810af384b40965cc0e3db75a93, type: 3}
   slamSound: {fileID: 8300000, guid: b6d18155a39edff4caa07bb0e11b010b, type: 3}
   lockSeconds: 5
+--- !u!114 &1623164801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623164787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5427e0bf176964e4ba2e563c5ccc5749, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AICollectibleSeeker
+  enemy: {fileID: 1494911843}
+  otherPlayers:
+  - {fileID: 1152507904}
+  - {fileID: 2020514902}
+  stoneTag: CollectibleStone
+  featherTag: CollectibleFeather
+  whistleTag: CollectibleWhistle
+  doorLockTag: CollectibleDoorLock
+  oneCollectibleAtATime: 0
+  seekRadius: 60
+  seekInterval: 1.5
+  firstSeekDelay: {x: 1, y: 4}
+  seekChance: 1
+  cooldownAfterUse: 10
+  leaveForHumanRadius: 1
+  killerNearItemRadius: 5
+  abortCollectDistance: 6
+  leaveHideMinKillerDist: 6
+  leaveHideMaxItemDist: 15
+  corridorBlockRadius: 5
+  instantGrabRadius: 2.5
+--- !u!114 &1623164802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623164787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d61a1f7ff82e2645bae70045a8a681c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMarker
+  model: {fileID: 1123902236}
+  thickness: 3
+  fillAlpha: 0.35
+  highlightHidingSpot: 1
+  fadeStartDistance: 6
+  fadeEndDistance: 1.5
+  spotSearchRadius: 1
+  opacity: 0.75
+  maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
+  outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
 --- !u!1 &1623534916
 GameObject:
   m_ObjectHideFlags: 0
@@ -48851,6 +49116,10 @@ MonoBehaviour:
   fillAlpha: 0.12
   maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
   outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
+  layerName: DistractionOutline
+  opacity: 1
+  fade: 1
+  extraRenderers: []
 --- !u!114 &1638455916
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -50044,12 +50313,15 @@ MonoBehaviour:
   instantChance: 0.3
   minSpawnTime: 5
   maxSpawnTime: 10
-  maxItemsOnMap: 3
+  maxItemsOnMap: 7
   maxInstantsInMap: 2
-  maxWhistlesInMap: 1
-  maxFeathersInMap: 1
-  maxDoorLocksInMap: 1
+  maxWhistlesInMap: 2
+  maxFeathersInMap: 2
+  maxDoorLocksInMap: 2
   instantLayerName: Pepper
+  itemSpacing: 5
+  rememberLastPoints: 4
+  jitterRadius: 0.7
 --- !u!1001 &1683948543
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -51355,6 +51627,10 @@ MonoBehaviour:
   fillAlpha: 0.12
   maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
   outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
+  layerName: DistractionOutline
+  opacity: 1
+  fade: 1
+  extraRenderers: []
 --- !u!82 &1755913669
 AudioSource:
   m_ObjectHideFlags: 0
@@ -53600,6 +53876,70 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b7c229f75a49719428db0e4ecd7d494d, type: 3}
   m_PrefabInstance: {fileID: 719228674}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1830503089
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1830503092}
+  - component: {fileID: 1830503091}
+  - component: {fileID: 1830503090}
+  m_Layer: 0
+  m_Name: PlayersTargetGroup
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1830503090
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1830503089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e065c4dc1e548804284a3d78c336b68e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayersCameraGroup
+  playerRadius: 1.2
+  aimHeight: 0.9
+--- !u!114 &1830503091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1830503089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5eb80d8e62d9d145bb50fb783c0f731, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineTargetGroup
+  PositionMode: 0
+  RotationMode: 0
+  UpdateMethod: 2
+  Targets: []
+  m_LegacyTargets: []
+--- !u!4 &1830503092
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1830503089}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1830690132
 GameObject:
   m_ObjectHideFlags: 0
@@ -58464,6 +58804,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2020514914}
   - component: {fileID: 2020514913}
+  - component: {fileID: 2020514915}
   - component: {fileID: 2020514912}
   - component: {fileID: 2020514902}
   - component: {fileID: 2020514911}
@@ -58475,6 +58816,7 @@ GameObject:
   - component: {fileID: 2020514905}
   - component: {fileID: 2020514904}
   - component: {fileID: 2020514903}
+  - component: {fileID: 2020514916}
   m_Layer: 0
   m_Name: Player3
   m_TagString: Player
@@ -58530,6 +58872,12 @@ MonoBehaviour:
   routeTolerance: 0.6
   keepClear: 0.6
   dangerDistance: 6
+  sabotage: 1
+  trapKillerRadius: 5
+  trapDoorRadius: 5
+  sabotageSafeDistance: 6
+  sabotageChance: 0.75
+  sabotageRethink: 3
 --- !u!114 &2020514905
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -58546,8 +58894,9 @@ MonoBehaviour:
   otherPlayers:
   - {fileID: 1152507904}
   - {fileID: 1623164790}
-  thinkTime: {x: 6, y: 16}
+  thinkTime: {x: 2, y: 6}
   minKillerDistance: 6
+  keepAwayFromMe: 4
 --- !u!114 &2020514906
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -58564,7 +58913,7 @@ MonoBehaviour:
   otherPlayers:
   - {fileID: 1152507904}
   - {fileID: 1623164790}
-  thinkTime: {x: 5, y: 12}
+  thinkTime: {x: 2, y: 6}
   blowDistance: 4
   minKillerDistance: 7
   giveUpAfter: 30
@@ -58634,14 +58983,9 @@ MonoBehaviour:
   hand: {fileID: 0}
   playerHUD: {fileID: 0}
   stoneTag: CollectibleStone
-  seekRadius: 60
   pickupDistance: 0.7
-  seekInterval: 1.5
-  firstSeekDelay: {x: 1, y: 4}
-  seekChance: 1
   cooldownAfterThrow: 12
-  leaveForHumanRadius: 1
-  thinkTime: {x: 6, y: 16}
+  thinkTime: {x: 3, y: 8}
   killerNearDistance: 6
   exposeMinKillerDistance: 5
   exposeChance: 0.5
@@ -58657,9 +59001,6 @@ MonoBehaviour:
   releaseDelay: 0.4
   throwTriggerName: Throw
   targetIndicator: {fileID: 1375783859}
-  instantGrabRadius: 2
-  killerNearItemRadius: 5
-  abortCollectDistance: 6
   spaceLimit: {fileID: 511183696}
   wallMargin: 0.8
 --- !u!114 &2020514910
@@ -58679,14 +59020,16 @@ MonoBehaviour:
   wanderSpeed: 2
   fleeSpeed: 2.4
   wanderRadius: 5
-  wanderPause: 0.6
-  dangerDistance: 4
+  wanderPause: 0.8
+  dangerDistance: 6
   enterDistance: 0.1
-  hideTimeRange: {x: 6, y: 12}
+  hideTimeRange: {x: 4, y: 8}
   safeDistance: 6
-  idleHideDelayRange: {x: 25, y: 45}
+  idleHideDelayRange: {x: 40, y: 70}
+  idleHiding: 0
   panicDistance: 1
   panicChancePerSecond: 0.13
+  maxExtraHideTime: 6
   randomSpotVariety: 6
   speedFloatName: Speed
   externalControl: 0
@@ -58726,7 +59069,7 @@ NavMeshAgent:
   m_Height: 0.7
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
+  m_ObstacleAvoidanceType: 0
 --- !u!95 &2020514913
 Animator:
   serializedVersion: 7
@@ -58766,6 +59109,61 @@ Transform:
   - {fileID: 1525031005}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+--- !u!114 &2020514915
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020514901}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5427e0bf176964e4ba2e563c5ccc5749, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AICollectibleSeeker
+  enemy: {fileID: 1494911843}
+  otherPlayers:
+  - {fileID: 1152507904}
+  - {fileID: 1623164790}
+  stoneTag: CollectibleStone
+  featherTag: CollectibleFeather
+  whistleTag: CollectibleWhistle
+  doorLockTag: CollectibleDoorLock
+  oneCollectibleAtATime: 0
+  seekRadius: 60
+  seekInterval: 1.5
+  firstSeekDelay: {x: 1, y: 4}
+  seekChance: 1
+  cooldownAfterUse: 12
+  leaveForHumanRadius: 2
+  killerNearItemRadius: 5
+  abortCollectDistance: 8
+  leaveHideMinKillerDist: 8
+  leaveHideMaxItemDist: 22
+  corridorBlockRadius: 5
+  instantGrabRadius: 2.5
+--- !u!114 &2020514916
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020514901}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d61a1f7ff82e2645bae70045a8a681c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMarker
+  model: {fileID: 1525031005}
+  thickness: 3
+  fillAlpha: 0.35
+  highlightHidingSpot: 1
+  fadeStartDistance: 6
+  fadeEndDistance: 1.5
+  spotSearchRadius: 1
+  opacity: 0.75
+  maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
+  outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
 --- !u!4 &2025439457 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 004b709bc3ff8c1449abf1466f29d238, type: 3}
@@ -62267,3 +62665,5 @@ SceneRoots:
   - {fileID: 225760217}
   - {fileID: 475009136}
   - {fileID: 1375783862}
+  - {fileID: 1830503092}
+  - {fileID: 613202576}

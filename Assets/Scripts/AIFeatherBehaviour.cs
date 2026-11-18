@@ -13,11 +13,14 @@ public class AIFeatherBehaviour : MonoBehaviour
     public Vector2 thinkTime = new Vector2(6f, 16f);
     [Tooltip("She will not use it while the killer is closer than this to her.")]
     public float minKillerDistance = 6f;
+    [Tooltip("Never tickle someone this close to her: the killer would come for her too.")]
+    public float keepAwayFromMe = 4f;
 
     AIHider ai;
     Hider hider;
     FeatherHolder holder;
     AIStoneBehaviour stones;
+    AICollectibleSeeker seeker;
     float thinkTimer;
     bool hadFeather;
 
@@ -26,6 +29,7 @@ public class AIFeatherBehaviour : MonoBehaviour
         ai = GetComponent<AIHider>();
         hider = GetComponent<Hider>();
         stones = GetComponent<AIStoneBehaviour>();
+        seeker = GetComponent<AICollectibleSeeker>();
         if (enemy == null) enemy = ai.enemy;
     }
 
@@ -41,17 +45,34 @@ public class AIFeatherBehaviour : MonoBehaviour
 
         thinkTimer -= Time.deltaTime;
         if (thinkTimer > 0f) return;
-        if (stones != null && stones.Busy) return;
-        if (!ai.IsWandering || ai.InDanger) return;
+        if ((stones != null && stones.Busy) || (seeker != null && seeker.Busy)) return;
+        // a tickle needs no walking, so she can do it from a hiding spot too
+        if (ai.InDanger || ai.externalControl) return;
+        if (!ai.IsWandering && !ai.IsHiddenNow) return;
         if (enemy != null && enemy.enabled && Vector3.Distance(transform.position, enemy.transform.position) < minKillerDistance) return;
 
-        Hider victim = null;
-        if (otherPlayers != null)
-            foreach (Hider h in otherPlayers)
-                if (h != null && h != hider && !h.IsCaught) { victim = h; break; }
+        Hider victim = PickVictim();
         if (victim == null) { thinkTimer = 3f; return; }
 
         holder.Tickle(victim);
         thinkTimer = 5f;
+    }
+
+    // Sabotage: the other player (human or AI) the killer is closest to, so the laugh brings him
+    // straight onto them. Hidden players count too (the laugh gives their spot away).
+    Hider PickVictim()
+    {
+        Hider best = null;
+        float bestScore = float.MaxValue;
+        if (otherPlayers == null) return null;
+        foreach (Hider h in otherPlayers)
+        {
+            if (h == null || h == hider || h.IsCaught) continue;
+            float toMe = Vector3.Distance(transform.position, h.transform.position);
+            if (toMe < keepAwayFromMe) continue;
+            float score = enemy != null ? Vector3.Distance(enemy.transform.position, h.transform.position) : toMe;
+            if (score < bestScore) { bestScore = score; best = h; }
+        }
+        return best;
     }
 }

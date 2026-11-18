@@ -5,6 +5,10 @@ TagManager:
   serializedVersion: 3
   tags:
   - CollectibleStone
+  - FxTemporaire
+  - CollectibleFeather
+  - CollectibleWhistle
+  - CollectibleDoorLock
   layers:
   - Default
   - TransparentFX
@@ -19,7 +23,7 @@ TagManager:
   - Pepper
   - DistractionOutline
   - FPVArms
-  - 
+  - PlayerOutline
   - 
   - 
   - 

@@ -143,7 +143,7 @@ GameObject:
   - component: {fileID: 8015113173570473681}
   m_Layer: 0
   m_Name: Whistle Collectible
-  m_TagString: Untagged
+  m_TagString: CollectibleWhistle
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

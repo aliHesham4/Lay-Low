@@ -1,0 +1,10 @@
+@"
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+*.meta
+"@ | Out-File -FilePath ".geminiignore" -Encoding utf8
