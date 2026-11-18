@@ -18,6 +18,7 @@ public class AICollectibleSeeker : MonoBehaviour
     public string featherTag = "CollectibleFeather";
     public string whistleTag = "CollectibleWhistle";
     public string doorLockTag = "CollectibleDoorLock";
+    public string iceGunTag = "CollectibleIceGun";
 
     [Header("Seeking Rules")]
     [Tooltip("If ticked, she will not seek another collectible while already carrying one.")]
@@ -52,7 +53,7 @@ public class AICollectibleSeeker : MonoBehaviour
     public float instantGrabRadius = 2.5f;
 
     enum Mode { Idle, GoingToCollectible, GoingToInstant }
-    enum ItemType { None, Stone, Feather, Whistle, DoorLock }
+    enum ItemType { None, Stone, Feather, Whistle, DoorLock, IceGun }
 
     Mode mode = Mode.Idle;
     ItemType targetType = ItemType.None;
@@ -65,6 +66,7 @@ public class AICollectibleSeeker : MonoBehaviour
     FeatherHolder featherHolder;
     WhistleHolder whistleHolder;
     DoorLockHolder doorLockHolder;
+    IceGunHolder iceGunHolder;
 
     GameObject targetItem;
     PepperCollectible instantTarget;
@@ -96,8 +98,9 @@ public class AICollectibleSeeker : MonoBehaviour
         if (featherHolder == null) featherHolder = GetComponent<FeatherHolder>();
         if (whistleHolder == null) whistleHolder = GetComponent<WhistleHolder>();
         if (doorLockHolder == null) doorLockHolder = GetComponent<DoorLockHolder>();
+        if (iceGunHolder == null) iceGunHolder = GetComponent<IceGunHolder>();
 
-        bool holdingAny = HasStone() || HasFeather() || HasWhistle() || HasDoorLock();
+        bool holdingAny = HasStone() || HasFeather() || HasWhistle() || HasDoorLock() || HasIceGun();
         if (hadAnyItem && !holdingAny)
             nextSeek = Time.time + cooldownAfterUse;
         hadAnyItem = holdingAny;
@@ -219,7 +222,7 @@ public class AICollectibleSeeker : MonoBehaviour
     GameObject FindBestCollectible(out ItemType chosenType)
     {
         chosenType = ItemType.None;
-        if (oneCollectibleAtATime && (HasStone() || HasFeather() || HasWhistle() || HasDoorLock()))
+        if (oneCollectibleAtATime && (HasStone() || HasFeather() || HasWhistle() || HasDoorLock() || HasIceGun()))
             return null;
 
         GameObject best = null;
@@ -236,6 +239,9 @@ public class AICollectibleSeeker : MonoBehaviour
 
         if (!HasDoorLock())
             EvaluateTag(doorLockTag, ItemType.DoorLock, ref best, ref bestDist, ref chosenType);
+
+        if (!HasIceGun())
+            EvaluateTag(iceGunTag, ItemType.IceGun, ref best, ref bestDist, ref chosenType);
 
         return best;
     }
@@ -287,6 +293,7 @@ public class AICollectibleSeeker : MonoBehaviour
     bool HasFeather() => featherHolder != null && featherHolder.HasFeather;
     bool HasWhistle() => whistleHolder != null && whistleHolder.HasWhistle;
     bool HasDoorLock() => doorLockHolder != null && doorLockHolder.HasLock;
+    bool HasIceGun() => iceGunHolder != null && iceGunHolder.HasIceGun;
 
     bool AlreadyHasTargetType()
     {
@@ -296,6 +303,7 @@ public class AICollectibleSeeker : MonoBehaviour
             case ItemType.Feather: return HasFeather();
             case ItemType.Whistle: return HasWhistle();
             case ItemType.DoorLock: return HasDoorLock();
+            case ItemType.IceGun: return HasIceGun();
             default: return false;
         }
     }

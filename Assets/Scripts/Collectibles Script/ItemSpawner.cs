@@ -31,6 +31,8 @@ public class ItemSpawner : MonoBehaviour
     public int maxFeathersInMap = 1;
     [Tooltip("Maximum door locks lying on the map at the same time.")]
     public int maxDoorLocksInMap = 1;
+    [Tooltip("Maximum ice guns lying on the map at the same time.")]
+    public int maxIceGunsInMap = 1;
     [Tooltip("Layer given to instants so they are easy to recognise.")]
     public string instantLayerName = "Pepper";
 
@@ -63,7 +65,8 @@ public class ItemSpawner : MonoBehaviour
         return GameObject.FindGameObjectsWithTag("CollectibleStone").Length +
                FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None).Length +
                FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None).Length +
-               FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None).Length;
+               FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None).Length +
+               FindObjectsByType<IceGunCollectible>(FindObjectsSortMode.None).Length;
     }
     int CountInstants() { return FindObjectsByType<PepperCollectible>(FindObjectsSortMode.None).Length; }
 
@@ -107,6 +110,16 @@ public class ItemSpawner : MonoBehaviour
             prefab = others[Random.Range(0, others.Count)];
         }
 
+        // limit ice guns the same way
+        if (prefab.GetComponent<IceGunCollectible>() != null &&
+            FindObjectsByType<IceGunCollectible>(FindObjectsSortMode.None).Length >= maxIceGunsInMap)
+        {
+            var others = new System.Collections.Generic.List<GameObject>();
+            foreach (GameObject g in pool) if (g != null && g.GetComponent<IceGunCollectible>() == null && g.GetComponent<DoorLockCollectible>() == null && g.GetComponent<FeatherCollectible>() == null && g.GetComponent<WhistleCollectible>() == null) others.Add(g);
+            if (others.Count == 0) return;
+            prefab = others[Random.Range(0, others.Count)];
+        }
+
         Vector3 spawnPos;
         if (!PickSpawnPosition(out spawnPos)) return;
 
@@ -132,6 +145,7 @@ public class ItemSpawner : MonoBehaviour
         foreach (WhistleCollectible c in FindObjectsByType<WhistleCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
         foreach (FeatherCollectible c in FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
         foreach (DoorLockCollectible c in FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
+        foreach (IceGunCollectible c in FindObjectsByType<IceGunCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
         Hider[] players = FindObjectsByType<Hider>(FindObjectsSortMode.None);
 
         var free = new System.Collections.Generic.List<Transform>();

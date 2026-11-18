@@ -8,6 +8,8 @@ public class PlayerMovement : MonoBehaviour
     [Header("Movement Settings")]
     public float moveSpeed = 6f;
     public float turnSpeed = 180f;
+    [Tooltip("Set by effects like the ice gun (1 = normal).")]
+    [HideInInspector] public float speedMultiplier = 1f;
 
     [Header("Jumping & Gravity")]
     public float jumpHeight = 0.5f;       // Height for a small jump
@@ -40,8 +42,8 @@ public class PlayerMovement : MonoBehaviour
         bool jumpPressed = Keyboard.current.spaceKey.wasPressedThisFrame;
 
         // 2. Turning Rotation
-        if (rightPressed) transform.Rotate(Vector3.up, turnSpeed * Time.deltaTime, Space.World);
-        if (leftPressed) transform.Rotate(Vector3.up, -turnSpeed * Time.deltaTime, Space.World);
+        if (rightPressed) transform.Rotate(Vector3.up, turnSpeed * speedMultiplier * Time.deltaTime, Space.World);
+        if (leftPressed) transform.Rotate(Vector3.up, -turnSpeed * speedMultiplier * Time.deltaTime, Space.World);
 
         // 3. Forward / Backward Motion (Mesh Direction Inverted)
         float moveInput = 0f;
@@ -69,7 +71,7 @@ public class PlayerMovement : MonoBehaviour
         verticalVelocity += gravity * Time.deltaTime;
 
         // 7. Execute Total Movement
-        Vector3 motion = (moveDirection * moveSpeed) + (Vector3.up * verticalVelocity);
+        Vector3 motion = (moveDirection * moveSpeed * speedMultiplier) + (Vector3.up * verticalVelocity);
         controller.Move(motion * Time.deltaTime);
 
         // 8. Update Animator Parameter

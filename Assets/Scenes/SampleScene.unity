@@ -33594,6 +33594,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -2337794517613658290, guid: ca0f3b42816412542a42550a68392a54, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: d55374a80eda1f74eaf4f9922b6c683c, type: 2}
     - target: {fileID: 919132149155446097, guid: ca0f3b42816412542a42550a68392a54, type: 3}
       propertyPath: m_Name
       value: wheelchair
@@ -35845,6 +35849,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMovement
   moveSpeed: 2
   turnSpeed: 180
+  speedMultiplier: 1
   jumpHeight: 0.5
   gravity: -9.81
 --- !u!95 &1152507899
@@ -36183,7 +36188,7 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 1, g: 0.55, b: 0.22, a: 1}
-  m_Intensity: 1.0171443
+  m_Intensity: 1.1164837
   m_Range: 3.5
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -48344,6 +48349,7 @@ GameObject:
   - component: {fileID: 1623164799}
   - component: {fileID: 1623164800}
   - component: {fileID: 1623164802}
+  - component: {fileID: 1623164803}
   m_Layer: 0
   m_Name: Player2
   m_TagString: Player
@@ -48656,6 +48662,7 @@ MonoBehaviour:
   featherTag: CollectibleFeather
   whistleTag: CollectibleWhistle
   doorLockTag: CollectibleDoorLock
+  iceGunTag: CollectibleIceGun
   oneCollectibleAtATime: 0
   seekRadius: 60
   seekInterval: 1.5
@@ -48691,6 +48698,24 @@ MonoBehaviour:
   opacity: 0.75
   maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
   outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
+--- !u!114 &1623164803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623164787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 715e47463783b4e46af451383111b6d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AIIceGunBehaviour
+  enemy: {fileID: 0}
+  otherPlayers: []
+  thinkTime: {x: 2, y: 5}
+  victimNearKiller: 8
+  useAnywayAfter: 25
+  keepAwayFromMe: 4
 --- !u!1 &1623534916
 GameObject:
   m_ObjectHideFlags: 0
@@ -50308,6 +50333,7 @@ MonoBehaviour:
   - {fileID: 7046931272860732009, guid: 20d40cf11e365824eab3bfbb4d95805b, type: 3}
   - {fileID: 7046931272860732009, guid: f8b5fb4d5f9284d48a25aea66f735998, type: 3}
   - {fileID: 7046931272860732009, guid: 1bcbe182b04d3764f9f470d336f47b05, type: 3}
+  - {fileID: 7046931272860732009, guid: 301f6b4f886c6fa4c86d0faff3230d1d, type: 3}
   instantPrefabs:
   - {fileID: 7046931272860732009, guid: 79e46d60e94fba1439e3975846c5e07c, type: 3}
   instantChance: 0.3
@@ -50318,6 +50344,7 @@ MonoBehaviour:
   maxWhistlesInMap: 2
   maxFeathersInMap: 2
   maxDoorLocksInMap: 2
+  maxIceGunsInMap: 1
   instantLayerName: Pepper
   itemSpacing: 5
   rememberLastPoints: 4
@@ -58817,6 +58844,7 @@ GameObject:
   - component: {fileID: 2020514904}
   - component: {fileID: 2020514903}
   - component: {fileID: 2020514916}
+  - component: {fileID: 2020514917}
   m_Layer: 0
   m_Name: Player3
   m_TagString: Player
@@ -59129,6 +59157,7 @@ MonoBehaviour:
   featherTag: CollectibleFeather
   whistleTag: CollectibleWhistle
   doorLockTag: CollectibleDoorLock
+  iceGunTag: CollectibleIceGun
   oneCollectibleAtATime: 0
   seekRadius: 60
   seekInterval: 1.5
@@ -59164,6 +59193,24 @@ MonoBehaviour:
   opacity: 0.75
   maskMaterial: {fileID: 2100000, guid: 90babd0e82e233e478f8602fe7fd9388, type: 2}
   outlineMaterial: {fileID: 2100000, guid: 3c2b67a59c8f89d4e89ea2d17b0fb109, type: 2}
+--- !u!114 &2020514917
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2020514901}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 715e47463783b4e46af451383111b6d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AIIceGunBehaviour
+  enemy: {fileID: 0}
+  otherPlayers: []
+  thinkTime: {x: 2, y: 5}
+  victimNearKiller: 8
+  useAnywayAfter: 25
+  keepAwayFromMe: 4
 --- !u!4 &2025439457 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 004b709bc3ff8c1449abf1466f29d238, type: 3}

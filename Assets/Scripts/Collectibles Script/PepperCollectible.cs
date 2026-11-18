@@ -18,6 +18,7 @@ public class PepperCollectible : MonoBehaviour
             a.y = 0f; b.y = 0f;
             if (Vector3.Distance(a, b) <= pickupRadius)
             {
+                IceSlow.Cancel(h.gameObject); // the pepper melts any ice
                 SpeedBoost.Apply(h.gameObject, boostSpeed, boostDuration);
                 Destroy(gameObject);
                 return;
