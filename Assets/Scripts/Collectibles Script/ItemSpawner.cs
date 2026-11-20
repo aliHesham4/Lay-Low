@@ -46,8 +46,15 @@ public class ItemSpawner : MonoBehaviour
 
     private readonly System.Collections.Generic.Queue<Transform> recentPoints = new System.Collections.Generic.Queue<Transform>();
 
+    [Tooltip("How many items are already lying around when the round starts.")]
+    public int itemsAtStart = 3;
+
     void Start()
     {
+        // drop the starting items right away (each one still respects the limits and spacing)
+        for (int i = 0; i < itemsAtStart; i++)
+            if (CountCollectibles() + CountInstants() < maxItemsOnMap) SpawnRandomItem();
+
         StartCoroutine(SpawnRoutine());
     }
 
@@ -156,6 +163,7 @@ public class ItemSpawner : MonoBehaviour
             foreach (Transform p in spawnPoints)
             {
                 if (p == null || recentPoints.Contains(p)) continue;
+                if (EnvironmentalHazard.IsDangerous(p.position)) continue; // not into a sealed room
                 float nearestItem = 99f;
                 foreach (Vector3 it in items) nearestItem = Mathf.Min(nearestItem, Flat(it, p.position));
                 if (nearestItem < spacing) continue;

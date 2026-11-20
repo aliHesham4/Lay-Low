@@ -84,6 +84,21 @@ public class LockableDoorway : MonoBehaviour
         return true;
     }
 
+    // Environmental states: shut for the rest of the round (also takes over a door already locked by a player)
+    public void LockForever(Color color)
+    {
+        if (!IsLocked) Lock(null, color, float.PositiveInfinity);
+        unlockAt = float.PositiveInfinity;
+        LockedBy = null;
+        if (stripe != null)
+        {
+            stripe.GetPropertyBlock(mpb);
+            mpb.SetColor("_BaseColor", color);
+            mpb.SetColor("_EmissionColor", color * 1.5f);
+            stripe.SetPropertyBlock(mpb);
+        }
+    }
+
     void Update()
     {
         if (IsLocked && Time.time >= unlockAt) Unlock();

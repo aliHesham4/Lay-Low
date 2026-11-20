@@ -75,6 +75,56 @@ public class AIHider : MonoBehaviour
     private float lastEnemyDist = 999f;
     private float noHideUntil; // after bailing out of a spot she just runs for a moment
     private bool wasInDanger;
+    private bool escapingHazard;
+    [Tooltip("Chance (0..1) that she panics and stays in a room that is about to be sealed.")]
+    [Range(0f, 1f)] public float hazardHesitation = 0.15f;
+    private EnvironmentalHazard hazardDecidedFor;
+    private bool hazardStays;
+    private float hazardRepath;
+
+    // Environmental state: leave a room that is about to be sealed. She stays (hesitates) only when the
+    // killer is chasing her right there, because running for the door would run into him.
+    bool HazardEscape()
+    {
+        if (agent == null) return false;
+        EnvironmentalHazard hz = EnvironmentalHazard.DangerAt(transform.position);
+        if (hz == null)
+        {
+            if (escapingHazard) { escapingHazard = false; noHideUntil = Time.time + 1f; if (!externalControl) PickWanderPoint(false); }
+            // heading for something inside a sealing room? pick something else
+            if (state == State.GoingToHide && targetSpot != null && EnvironmentalHazard.IsDangerous(targetSpot.transform.position))
+            { targetSpot = null; state = State.Wandering; PickWanderPoint(false); }
+            else if (state == State.Wandering && agent.enabled && agent.hasPath && EnvironmentalHazard.IsDangerous(agent.destination))
+                PickWanderPoint(false);
+            return false;
+        }
+        if (hz.State == EnvironmentalHazard.Phase.Sealed) return false; // too late
+
+        // decided once per alert: sometimes she freezes up and stays (and dies when it seals)
+        if (hazardDecidedFor != hz) { hazardDecidedFor = hz; hazardStays = Random.value < hazardHesitation; }
+        if (hazardStays)
+        {
+            if (state != State.Hidden && agent.enabled && agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+            return true; // stays put (in her hiding spot, if she is in one)
+        }
+        if (!escapingHazard && enemy != null && BeingChased() &&
+            Vector3.Distance(transform.position, enemy.transform.position) < 3f) return false; // hesitates
+
+        if (state == State.Hidden) LeaveHidingSpot();
+        if (state == State.GoingToHide) { targetSpot = null; state = State.Wandering; }
+        if (!agent.enabled || !agent.isOnNavMesh) return true;
+
+        escapingHazard = true;
+        hazardRepath -= Time.deltaTime;
+        if (hazardRepath <= 0f)
+        {
+            hazardRepath = 0.5f;
+            Vector3 exit;
+            if (hz.ExitPoint(transform.position, out exit)) { agent.isStopped = false; agent.SetDestination(exit); }
+        }
+        agent.speed = fleeSpeed;
+        return true;
+    }
     private bool escapeOk = true;     // last escape search found a route that keeps clear of him
     private bool killerClosing;
     private float lastKillerDist = 999f;
@@ -119,6 +169,15 @@ public class AIHider : MonoBehaviour
     void Update()
     {
         if (hider.IsCaught) { SetAnim(0f); return; }
+
+        // a room is about to be sealed (environmental state): get out of it first
+        if (HazardEscape())
+        {
+            bool moving = agent.enabled && agent.isOnNavMesh && state != State.Hidden;
+            if (moving) HandleRotation();
+            SetAnim(moving ? agent.velocity.magnitude : 0f);
+            return;
+        }
 
         if (state == State.Hidden) { UpdateHidden(); SetAnim(0f); return; }
 
@@ -291,6 +350,7 @@ public class AIHider : MonoBehaviour
             Vector3 random = transform.position + new Vector3(r.x, 0f, r.y);
             if (!NavMesh.SamplePosition(random, out NavMeshHit hit, 1.5f, NavMesh.AllAreas)) continue;
             if (!NavMesh.CalculatePath(start.position, hit.position, NavMesh.AllAreas, tryPath) || tryPath.status != NavMeshPathStatus.PathComplete) continue;
+            if (EnvironmentalHazard.IsDangerous(hit.position)) continue; // never into a room that is sealing / sealed
             float len = PathLength(tryPath);
             if (len < minDist * 0.8f) continue;
 
@@ -389,6 +449,7 @@ public class AIHider : MonoBehaviour
         foreach (HidingSpot s in hidingSpots)
         {
             if (s == null || !s.IsFree) continue;
+            if (EnvironmentalHazard.IsDangerous(s.transform.position)) continue;
             if (blockedUntil.TryGetValue(s, out float until) && Time.time < until) continue;
 
             float d = Vector3.Distance(transform.position, s.transform.position);

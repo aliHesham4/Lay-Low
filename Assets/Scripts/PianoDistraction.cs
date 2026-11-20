@@ -70,6 +70,9 @@ public class PianoDistraction : MonoBehaviour
 
     void TurnOn()
     {
+        // its room is sealing / sealed (environmental state): it stays off for the rest of the round,
+        // otherwise the killer would keep trying to reach a switch behind a locked door
+        if (EnvironmentalHazard.IsDangerous(turnOffPosition != null ? turnOffPosition.position : transform.position)) return;
         if (hasPlayedOnce) return;
         if (!DistractionGate.CanStart()) { Invoke(nameof(TurnOn), 1f); return; }
 

@@ -104,6 +104,18 @@ public class EnemyVision : MonoBehaviour
 
     public bool IsBusy { get { return currentState != EnemyState.Searching; } }
     public bool IsGoingToAppliance { get { return lure == Lure.Appliance; } }
+
+    // Distance along the floor (around walls), not in a straight line. Huge if there is no way there.
+    public static float WalkingDistance(Vector3 from, Vector3 to)
+    {
+        UnityEngine.AI.NavMeshPath path = new UnityEngine.AI.NavMeshPath();
+        if (!UnityEngine.AI.NavMesh.CalculatePath(from, to, UnityEngine.AI.NavMesh.AllAreas, path) || path.status != UnityEngine.AI.NavMeshPathStatus.PathComplete)
+            return float.MaxValue;
+        float len = 0f;
+        Vector3[] c = path.corners;
+        for (int i = 1; i < c.Length; i++) len += Vector3.Distance(c[i - 1], c[i]);
+        return len;
+    }
     public bool IsGoingToNoise { get { return lure == Lure.Noise; } }
 
     // A sound (stone, whistle, laugh). run = slightly faster walk (laugh).
@@ -260,7 +272,7 @@ public class EnemyVision : MonoBehaviour
                 System.Action off = lureSwitchOff;
                 Vector3 p = lurePos;
                 EndLure();
-                if (finished == Lure.Appliance && off != null && FlatDistance(transform.position, p) <= switchOffDistance) off();
+                if (finished == Lure.Appliance && off != null && WalkingDistance(transform.position, p) <= switchOffDistance) off(); // by the walking route, so never through a wall
             }
         }
 

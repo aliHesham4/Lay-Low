@@ -61,6 +61,9 @@ public class ClockAlarmDistraction : MonoBehaviour
 
     void TurnOn()
     {
+        // its room is sealing / sealed (environmental state): it stays off for the rest of the round,
+        // otherwise the killer would keep trying to reach a switch behind a locked door
+        if (EnvironmentalHazard.IsDangerous(turnOffPosition != null ? turnOffPosition.position : transform.position)) return;
         if (hasPlayedOnce) return;
 
         // Only one distraction at a time and a break between them: try again shortly.
@@ -113,8 +116,10 @@ public class ClockAlarmDistraction : MonoBehaviour
 
                 Vector3 targetPos = turnOffPosition != null ? turnOffPosition.position : transform.position;
                 Vector3 agentPos = respondingAgent.transform.position;
-                targetPos.y = agentPos.y;
-                if (Vector3.Distance(agentPos, targetPos) <= 1f) TurnOff();
+                Vector3 flat = targetPos; flat.y = agentPos.y;
+                // close in a straight line is not enough (the corridor is right behind the wall):
+                // he has to actually be at the clock, measured along the floor around the walls
+                if (Vector3.Distance(agentPos, flat) <= 1f && EnemyVision.WalkingDistance(agentPos, targetPos) <= 1.2f) TurnOff();
             }
         }
         else if (fading)

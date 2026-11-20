@@ -21,6 +21,7 @@ public class PlayerStoneThrower : MonoBehaviour
 
     private bool hasStone = false;
     private bool isTargeting = false;
+    public bool IsTargeting { get { return isTargeting; } }
     private Collider playerCollider;
     private Hider hiderRef;
 
