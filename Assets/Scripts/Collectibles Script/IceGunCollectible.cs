@@ -12,7 +12,7 @@ public class IceGunCollectible : MonoBehaviour
     public Material iceMaterial;
     [Tooltip("Burst of ice when the cubes form and when they shatter.")]
     public GameObject iceVfx;
-    public float freezeDuration = 3f;
+    public float freezeDuration = 5f;
     [Range(0.05f, 1f)] [Tooltip("Speed while frozen, as a fraction of normal speed.")]
     public float slowFactor = 0.35f;
     [Tooltip("How close a player must get to grab it (metres, flat distance).")]

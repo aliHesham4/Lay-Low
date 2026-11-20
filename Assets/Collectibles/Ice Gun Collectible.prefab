@@ -305,7 +305,7 @@ MonoBehaviour:
   crackSound: {fileID: 8300000, guid: fc8aa357e4281e04fb996fbbdd3dbf4f, type: 3}
   iceMaterial: {fileID: 2100000, guid: 821c319fcf94a0e459e9353b3ed0c22c, type: 2}
   iceVfx: {fileID: 5112403345868107898, guid: 6f34ef0d986e9db4199cf75805f79753, type: 3}
-  freezeDuration: 3
+  freezeDuration: 5
   slowFactor: 0.35
   pickupRadius: 0.9
 --- !u!1001 &262299422370528750

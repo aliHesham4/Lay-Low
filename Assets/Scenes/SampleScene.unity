@@ -4291,7 +4291,7 @@ Transform:
   m_GameObject: {fileID: 129634775}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.9175, y: 0.008684039, z: 0.38724995}
+  m_LocalPosition: {x: 1.55, y: 0.008684039, z: 0.11}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6262,7 +6262,7 @@ Transform:
   m_GameObject: {fileID: 212355967}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -3.0825, y: 0.029333115, z: 4.38725}
+  m_LocalPosition: {x: -2.38, y: 0.029333115, z: 4.51}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11881,8 +11881,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330315553}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.034050863, y: 0.9077024, z: -0.4114285, w: 0.075123735}
-  m_LocalPosition: {x: 6.88, y: 4.009, z: 6.94}
+  m_LocalRotation: {x: 0.04689655, y: 0.88455003, z: -0.45504007, w: 0.09116196}
+  m_LocalPosition: {x: 6.88, y: 3.9689999, z: 6.34}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -11914,10 +11914,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineThirdPersonFollow
   Damping: {x: 0.1, y: 0.5, z: 0.3}
-  ShoulderOffset: {x: 0.5, y: 1.97, z: 0}
-  VerticalArmLength: 1.5
+  ShoulderOffset: {x: 0.5, y: 1.65, z: 0}
+  VerticalArmLength: 1.78
   CameraSide: 1
-  CameraDistance: 3
+  CameraDistance: 2.4
   AvoidObstacles:
     Enabled: 0
     CollisionFilter:
@@ -12014,8 +12014,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.034050863, y: 0.9077024, z: -0.4114285, w: 0.075123735}
-  m_LocalPosition: {x: 6.88, y: 4.009, z: 6.94}
+  m_LocalRotation: {x: 0.04689655, y: 0.88455003, z: -0.45504007, w: 0.09116196}
+  m_LocalPosition: {x: 6.88, y: 3.9689999, z: 6.34}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -13573,7 +13573,7 @@ Transform:
   m_GameObject: {fileID: 371488502}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 7.5674996, y: 0.036000013, z: -0.71274996}
+  m_LocalPosition: {x: -0.33, y: 0.036000013, z: -1.24}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -15070,7 +15070,7 @@ Transform:
   m_GameObject: {fileID: 432261926}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 8.317499, y: 0.036000013, z: -0.012749672}
+  m_LocalPosition: {x: 8.12, y: 0.036000013, z: -0.35}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -16787,7 +16787,7 @@ Transform:
   m_GameObject: {fileID: 517310863}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.9175, y: 0.029333115, z: -3.11275}
+  m_LocalPosition: {x: 1.9175, y: 0.029333115, z: -3.62}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -30962,7 +30962,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1ed4df3ab16b1564f9dee1b83a4e4287, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.83519983
+      value: -0.94
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1ed4df3ab16b1564f9dee1b83a4e4287, type: 3}
       propertyPath: m_LocalPosition.y
@@ -30970,7 +30970,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1ed4df3ab16b1564f9dee1b83a4e4287, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.6092005
+      value: -1.69
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1ed4df3ab16b1564f9dee1b83a4e4287, type: 3}
       propertyPath: m_LocalRotation.w
@@ -36188,7 +36188,7 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 1, g: 0.55, b: 0.22, a: 1}
-  m_Intensity: 1.1164837
+  m_Intensity: 1.1452787
   m_Range: 3.5
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -50339,11 +50339,11 @@ MonoBehaviour:
   instantChance: 0.3
   minSpawnTime: 5
   maxSpawnTime: 10
-  maxItemsOnMap: 7
+  maxItemsOnMap: 9
   maxInstantsInMap: 2
   maxWhistlesInMap: 2
-  maxFeathersInMap: 2
-  maxDoorLocksInMap: 2
+  maxFeathersInMap: 1
+  maxDoorLocksInMap: 3
   maxIceGunsInMap: 1
   instantLayerName: Pepper
   itemSpacing: 5
@@ -54542,7 +54542,7 @@ Transform:
   m_GameObject: {fileID: 1849287299}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5.4175, y: 0.002284646, z: 4.38725}
+  m_LocalPosition: {x: 6.13, y: 0.002284646, z: 3.92}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
