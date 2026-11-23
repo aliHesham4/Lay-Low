@@ -65,6 +65,6 @@ public class EnemyFootsteps : MonoBehaviour
 
         // Play with a slight random pitch variation to avoid a robotic sound
         audioSource.pitch = Random.Range(0.9f, 1.1f);
-        audioSource.PlayOneShot(clip, 0.7f);
+        audioSource.PlayOneShot(clip, 0.7f * BlackoutRound.FootstepScale); // quieter in the blackout round
     }
 }

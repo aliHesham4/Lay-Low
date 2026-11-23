@@ -106,8 +106,17 @@ public class RoundManager : MonoBehaviour
         if (roundOver) return;
         Toast(caught.displayName + " was caught!");
 
-        foreach (Hider h in hiders) if (h != null && !h.IsCaught) return; // someone is still free
-        EndRound("Everyone was caught!");
+        // count who is still free: nobody -> everyone was caught; only one left -> they are the last one standing
+        int players = 0, free = 0;
+        Hider survivor = null;
+        foreach (Hider h in hiders)
+        {
+            if (h == null) continue;
+            players++;
+            if (!h.IsCaught) { free++; survivor = h; }
+        }
+        if (free == 0) EndRound("Everyone was caught!");
+        else if (free == 1 && players > 1) EndRound(survivor.displayName + " is the last one standing!");
     }
 
     void EndRound(string reason)

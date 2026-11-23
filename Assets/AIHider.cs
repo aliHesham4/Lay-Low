@@ -9,6 +9,27 @@ public class AIHider : MonoBehaviour
 {
     [Header("References")]
     public EnemyVision enemy;
+
+    // Blackout round: she can't see him in the dark either. She only knows where he is when he is close (heard / felt),
+    // when he is chasing her, or from the last lamp she saw flicker (fake-outs fool her too).
+    Vector3 believedKiller = new Vector3(0f, -1000f, 0f);
+    float beliefTime = -999f;
+    int beliefFrame = -1;
+    Vector3 KillerPos
+    {
+        get
+        {
+            if (!BlackoutRound.Active) return enemy.transform.position;
+            if (beliefFrame != Time.frameCount)
+            {
+                beliefFrame = Time.frameCount;
+                Vector3 real = enemy.transform.position;
+                if (Vector3.Distance(real, transform.position) < 4f || (enemy.enabled && enemy.CurrentTarget == hider)) { believedKiller = real; beliefTime = Time.time; }
+                else if (BlackoutRound.LastFlickerTime > beliefTime) { believedKiller = BlackoutRound.LastFlickerPos; beliefTime = BlackoutRound.LastFlickerTime; }
+            }
+            return believedKiller;
+        }
+    }
     [Tooltip("Leave empty to find every HidingSpot in the scene automatically.")]
     public HidingSpot[] hidingSpots;
 
@@ -92,9 +113,9 @@ public class AIHider : MonoBehaviour
         {
             if (escapingHazard) { escapingHazard = false; noHideUntil = Time.time + 1f; if (!externalControl) PickWanderPoint(false); }
             // heading for something inside a sealing room? pick something else
-            if (state == State.GoingToHide && targetSpot != null && EnvironmentalHazard.IsDangerous(targetSpot.transform.position))
+            if (state == State.GoingToHide && targetSpot != null && EnvironmentalHazard.IsDangerous(targetSpot.transform.position, this))
             { targetSpot = null; state = State.Wandering; PickWanderPoint(false); }
-            else if (state == State.Wandering && agent.enabled && agent.hasPath && EnvironmentalHazard.IsDangerous(agent.destination))
+            else if (state == State.Wandering && agent.enabled && agent.hasPath && EnvironmentalHazard.IsDangerous(agent.destination, this))
                 PickWanderPoint(false);
             return false;
         }
@@ -108,7 +129,7 @@ public class AIHider : MonoBehaviour
             return true; // stays put (in her hiding spot, if she is in one)
         }
         if (!escapingHazard && enemy != null && BeingChased() &&
-            Vector3.Distance(transform.position, enemy.transform.position) < 3f) return false; // hesitates
+            Vector3.Distance(transform.position, KillerPos) < 3f) return false; // hesitates
 
         if (state == State.Hidden) LeaveHidingSpot();
         if (state == State.GoingToHide) { targetSpot = null; state = State.Wandering; }
@@ -193,7 +214,7 @@ public class AIHider : MonoBehaviour
         if (enemy != null && closingTimer <= 0f)
         {
             closingTimer = 0.25f;
-            float kd0 = Vector3.Distance(transform.position, enemy.transform.position);
+            float kd0 = Vector3.Distance(transform.position, KillerPos);
             killerClosing = kd0 < lastKillerDist - 0.15f;
             lastKillerDist = kd0;
         }
@@ -209,7 +230,7 @@ public class AIHider : MonoBehaviour
             {
                 // RUN first. She only hides when she can't run: no escape route that keeps clear of him,
                 // or he is chasing her and right on top of her.
-                float kd = enemy != null ? Vector3.Distance(transform.position, enemy.transform.position) : 99f;
+                float kd = enemy != null ? Vector3.Distance(transform.position, KillerPos) : 99f;
                 // hiding while he is watching her just shows him the spot (he searches it almost surely),
                 // so then she keeps running even without a perfect route
                 bool trapped = !escapeOk && !(BeingChased() && KillerSeesMe());
@@ -276,7 +297,7 @@ public class AIHider : MonoBehaviour
         if (enemy == null || !enemy.enabled) return false; // killer still inside the elevator
         if (enemy.CurrentTarget == hider) return true;
         if (Time.time < startGraceUntil) return false;
-        float d = Vector3.Distance(transform.position, enemy.transform.position);
+        float d = Vector3.Distance(transform.position, KillerPos);
         if (d >= dangerDistance) return false;
         // he only sees about 2 m and not through walls: behind a wall he is only a threat when right next to her
         // he only sees about 2 m and not through walls: he counts when he can see her, is right next to her,
@@ -290,7 +311,7 @@ public class AIHider : MonoBehaviour
     bool KillerSeesMe()
     {
         if (enemy == null) return false;
-        Vector3 from = enemy.transform.position + Vector3.up * 0.6f, to = transform.position + Vector3.up * 0.4f;
+        Vector3 from = KillerPos + Vector3.up * 0.6f, to = transform.position + Vector3.up * 0.4f;
         return !Physics.Linecast(from, to, enemy.obstacleMask, QueryTriggerInteraction.Ignore);
     }
 
@@ -312,7 +333,7 @@ public class AIHider : MonoBehaviour
             {
                 fleeCheckTimer = 1f;
                 if (inDanger) { if (RouteTowardKiller(agent.path)) PickWanderPoint(true); }
-                else if (PathPasses(agent.path, enemy.transform.position, 3.5f)) PickWanderPoint(false);
+                else if (PathPasses(agent.path, KillerPos, 3.5f)) PickWanderPoint(false);
             }
         }
 
@@ -341,7 +362,7 @@ public class AIHider : MonoBehaviour
         Vector3 best = transform.position;
         float bestScore = float.MinValue;
         bool found = false;
-        float myKillerDist = enemy != null ? Vector3.Distance(transform.position, enemy.transform.position) : 99f;
+        float myKillerDist = enemy != null ? Vector3.Distance(transform.position, KillerPos) : 99f;
         if (tryPath == null) tryPath = new NavMeshPath();
 
         for (int i = 0; i < tries; i++)
@@ -350,7 +371,7 @@ public class AIHider : MonoBehaviour
             Vector3 random = transform.position + new Vector3(r.x, 0f, r.y);
             if (!NavMesh.SamplePosition(random, out NavMeshHit hit, 1.5f, NavMesh.AllAreas)) continue;
             if (!NavMesh.CalculatePath(start.position, hit.position, NavMesh.AllAreas, tryPath) || tryPath.status != NavMeshPathStatus.PathComplete) continue;
-            if (EnvironmentalHazard.IsDangerous(hit.position)) continue; // never into a room that is sealing / sealed
+            if (EnvironmentalHazard.IsDangerous(hit.position, this)) continue; // never into a room that is sealing / sealed
             float len = PathLength(tryPath);
             if (len < minDist * 0.8f) continue;
 
@@ -359,7 +380,7 @@ public class AIHider : MonoBehaviour
             {
                 // as far from him as possible, and never along a route that runs past him
                 // as far from him as possible, and never along a route that brings her closer to him
-                score = Vector3.Distance(hit.position, enemy.transform.position);
+                score = Vector3.Distance(hit.position, KillerPos);
                 if (RouteTowardKiller(tryPath)) score -= 20f;
             }
             else
@@ -367,9 +388,9 @@ public class AIHider : MonoBehaviour
                 // away from the other players, a decent walk, and not into the killer's area
                 score = Mathf.Min(8f, NearestOtherPlayer(hit.position)) + Mathf.Min(len, 8f) * 0.3f + Random.Range(0f, 2f);
                 // stay away from the killer, including his elevator at the start of the round
-                if (enemy != null && Vector3.Distance(hit.position, enemy.transform.position) < dangerDistance + 2f) score -= 6f;
+                if (enemy != null && Vector3.Distance(hit.position, KillerPos) < dangerDistance + 2f) score -= 6f;
                 // ...and don't walk past him on the way there
-                if (enemy != null && PathMinDist(tryPath, enemy.transform.position) < 3.5f) score -= 10f;
+                if (enemy != null && PathMinDist(tryPath, KillerPos) < 3.5f) score -= 10f;
             }
 
             if (score > bestScore) { best = hit.position; bestScore = score; found = true; }
@@ -384,8 +405,8 @@ public class AIHider : MonoBehaviour
     bool RouteTowardKiller(NavMeshPath p)
     {
         if (enemy == null) return false;
-        float now = Vector3.Distance(transform.position, enemy.transform.position);
-        float closest = PathMinDist(p, enemy.transform.position);
+        float now = Vector3.Distance(transform.position, KillerPos);
+        float closest = PathMinDist(p, KillerPos);
         return closest < Mathf.Min(2.5f, now) - 0.3f || closest < now - 1.5f;
     }
 
@@ -449,7 +470,7 @@ public class AIHider : MonoBehaviour
         foreach (HidingSpot s in hidingSpots)
         {
             if (s == null || !s.IsFree) continue;
-            if (EnvironmentalHazard.IsDangerous(s.transform.position)) continue;
+            if (EnvironmentalHazard.IsDangerous(s.transform.position, this)) continue;
             if (blockedUntil.TryGetValue(s, out float until) && Time.time < until) continue;
 
             float d = Vector3.Distance(transform.position, s.transform.position);
@@ -457,7 +478,7 @@ public class AIHider : MonoBehaviour
 
             if (enemy != null)
             {
-                float dEnemy = Vector3.Distance(enemy.transform.position, s.transform.position);
+                float dEnemy = Vector3.Distance(KillerPos, s.transform.position);
                 // never run toward the killer: skip spots he is nearer to (or right beside)
                 if (dEnemy < 3f) continue;
                 if (urgent && dEnemy < d) continue;
@@ -469,7 +490,7 @@ public class AIHider : MonoBehaviour
                 Vector3 ap = s.GetApproachPoint();
                 if (NavMesh.SamplePosition(ap, out NavMeshHit aph, 1.5f, NavMesh.AllAreas) &&
                     NavMesh.CalculatePath(transform.position, aph.position, NavMesh.AllAreas, tryPath) &&
-                    PathMinDist(tryPath, enemy.transform.position) < 2.5f) continue;
+                    PathMinDist(tryPath, KillerPos) < 2.5f) continue;
             }
 
             // don't crowd into a spot right next to another player
@@ -493,7 +514,7 @@ public class AIHider : MonoBehaviour
         if (enemy != null && targetSpot != null && hideRouteTimer <= 0f && agent.hasPath && !agent.pathPending)
         {
             hideRouteTimer = 0.5f;
-            if (agent.remainingDistance > enterDistance + 0.5f && PathPasses(agent.path, enemy.transform.position, 2f))
+            if (agent.remainingDistance > enterDistance + 0.5f && PathPasses(agent.path, KillerPos, 2f))
             {
                 blockedUntil[targetSpot] = Time.time + 5f;
                 targetSpot = null;
@@ -550,7 +571,7 @@ public class AIHider : MonoBehaviour
         // She only sees him getting closer, and she may lose her nerve and bolt.
         if (enemy != null && targetSpot != null)
         {
-            float d = Vector3.Distance(transform.position, enemy.transform.position);
+            float d = Vector3.Distance(transform.position, KillerPos);
             bool approaching = d < lastEnemyDist - 0.01f;
             lastEnemyDist = d;
             if (d < panicDistance && approaching && Random.value < panicChancePerSecond * Time.deltaTime)
@@ -565,7 +586,7 @@ public class AIHider : MonoBehaviour
         }
 
         bool enemyNear = enemy != null &&
-            Vector3.Distance(transform.position, enemy.transform.position) < safeDistance;
+            Vector3.Distance(transform.position, KillerPos) < safeDistance;
 
         // once he is well away she doesn't sit around: back out within ~2 s to go for items
         if (!enemyNear && !IsInDanger()) hideTimer = Mathf.Min(hideTimer, 2f);

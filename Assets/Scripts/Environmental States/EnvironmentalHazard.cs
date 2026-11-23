@@ -23,6 +23,42 @@ public class EnvironmentalHazard : MonoBehaviour
     [Header("Room")]
     [Tooltip("Trigger box covering the whole room. Anyone inside it when the room seals dies.")]
     public BoxCollider area;
+    [Tooltip("More boxes that belong to the same hazard (e.g. a second terrace). Effects play in each.")]
+    public BoxCollider[] extraAreas;
+
+    [Header("Open areas (no doors)")]
+    [Tooltip("Anyone who walks in while it is active dies (not only those inside when it starts).")]
+    public bool deadlyWhileActive = false;
+    [Tooltip("NavMesh area painted over these boxes. While active the killer can't walk there; AI players avoid it except by mistake.")]
+    public string navArea = "";
+    [Range(0f, 1f)] [Tooltip("Chance per AI player that it doesn't notice and may still wander in.")]
+    public float aiMistakeChance = 0.2f;
+    readonly HashSet<Component> careless = new HashSet<Component>();
+
+    [Header("Lightning (thunderstorm)")]
+    [Tooltip("Anyone killed by this hazard is struck by a lightning bolt, and random bolts hit the area while it's active.")]
+    public bool lightningStrikes = false;
+    public Color boltColor = new Color(0.75f, 0.85f, 1f, 1f);
+    [Tooltip("Spawned where a bolt lands (e.g. CFXR3 Hit Electric C).")]
+    public GameObject strikeEffectPrefab;
+    [Tooltip("Extra flash where a bolt lands (e.g. CFXR Flash).")]
+    public GameObject strikeFlashPrefab;
+    public AudioClip strikeSound;
+    [Range(0f, 1f)] public float strikeSoundVolume = 0.8f;
+    [Tooltip("Seconds between random bolts on the area (min, max). 0 = no random bolts.")]
+    public Vector2 ambientStrikeInterval = new Vector2(2.5f, 6f);
+    public float boltHeight = 9f;
+    static Material boltMaterial;
+
+    [Header("Background effect (visual only)")]
+    [Tooltip("Boxes (collider can stay disabled) where the main effect also plays just for looks: nobody dies there, no lightning.")]
+    public BoxCollider[] backgroundAreas;
+    [Tooltip("Particles per second per square metre in the background boxes.")]
+    public float backgroundDensity = 6f;
+    [Tooltip("Height above the box bottom where the background effect starts.")]
+    public float backgroundHeight = 6f;
+
+
     [Tooltip("Every doorway into the room: shut for the rest of the round.")]
     public LockableDoorway[] doorways;
     [Tooltip("Objects hidden until the room seals, then dropped from above (e.g. the cones around the fireplace).")]
@@ -39,6 +75,8 @@ public class EnvironmentalHazard : MonoBehaviour
     public Transform warningEffectPoint;
     [Range(0.1f, 2f)] [Tooltip("Size of the alert effect (1 = as made). It points along the point's blue (Z) axis.")]
     public float warningEffectScale = 1f;
+    [Range(0f, 1f)] [Tooltip("Opacity of the alert effect (e.g. the fireplace smoke). 1 = as made.")]
+    public float warningEffectOpacity = 1f;
 
     [Header("Effect")]
     [Tooltip("Particle effect that fills the room (e.g. CFXR2 Poison Cloud). Several are spread over the room and keep looping.")]
@@ -61,6 +99,23 @@ public class EnvironmentalHazard : MonoBehaviour
     public float effectSettledRate = 0.8f;
     [Tooltip("Turn each effect a random way (off for wall-shaped effects like a firewall).")]
     public bool effectRandomRotation = true;
+    [Tooltip("One effect per box, stretched to cover it (e.g. rain): its emitter shape is resized to the box. Effect Height = how high above the floor it starts.")]
+    public bool effectFitToArea = false;
+    [Tooltip("With Fit To Area: particles per second per square metre.")]
+    public float effectDensity = 6f;
+
+    [Header("Extra flames (variety)")]
+    [Tooltip("Optional smaller effects scattered over the area on top of the main one (e.g. CFXR Fire), each a different size and out of step.")]
+    public GameObject extraEffectPrefab;
+    public int extraEffectCount = 0;
+    [Tooltip("Random size range of the extra flames.")]
+    public Vector2 extraEffectSize = new Vector2(0.5f, 1f);
+    [Tooltip("Each extra flame starts after a random delay in this range (seconds after the seal).")]
+    public Vector2 extraEffectDelay = new Vector2(0f, 2.5f);
+    [Range(0f, 1f)] [Tooltip("Share of the extra flames that give off smoke.")]
+    public float extraSmokeChance = 0.25f;
+    [Tooltip("Switch off flying embers / sparks of the effect (keeps it tidy and inside the area).")]
+    public bool effectNoEmbers = false;
     [Range(0.1f, 1f)] [Tooltip("Height of the flames compared to their width (1 = as made, lower = flatter, shorter fire).")]
     public float effectHeightScale = 1f;
     [Range(0f, 1f)] [Tooltip("Share of the effects that also give off smoke (1 = all of them).")]
@@ -84,6 +139,15 @@ public class EnvironmentalHazard : MonoBehaviour
     [Tooltip("Optional effect shown on each victim (e.g. CFXR4 _POISONED_).")]
     public GameObject victimEffectPrefab;
     public AudioClip sealSound;
+    [Tooltip("Loops from the room during the alert (e.g. a security alarm), then stops when it seals.")]
+    public AudioClip warningSound;
+    [Range(0f, 1f)] public float warningSoundVolume = 0.35f;
+    [Tooltip("Played once the moment the room seals / ignites (e.g. a whoosh), on top of the Seal Sound. Started early so its loudest moment lands exactly on the seal.")]
+    public AudioClip igniteSound;
+    [Range(0f, 1f)] public float igniteSoundVolume = 1f;
+    [Tooltip("Keep the seal sound looping until the round ends (e.g. fire crackle). Off = it plays once.")]
+    public bool loopSealSound = false;
+    [Range(0f, 1f)] public float sealSoundVolume = 1f;
 
     [Header("Room lights")]
     [Tooltip("Lights of this room (found automatically inside the box if left empty): they flash red during the alert, then fade to black.")]
@@ -141,16 +205,44 @@ public class EnvironmentalHazard : MonoBehaviour
 
     public bool Contains(Vector3 p)
     {
-        if (area == null) return false;
-        Vector3 local = area.transform.InverseTransformPoint(p) - area.center;
-        Vector3 half = area.size * 0.5f;
+        if (InBox(area, p)) return true;
+        if (extraAreas != null) foreach (BoxCollider b in extraAreas) if (InBox(b, p)) return true;
+        return false;
+    }
+
+    static bool InBox(BoxCollider box, Vector3 p)
+    {
+        if (box == null) return false;
+        Vector3 local = box.transform.InverseTransformPoint(p) - box.center;
+        Vector3 half = box.size * 0.5f;
         return Mathf.Abs(local.x) <= half.x && Mathf.Abs(local.z) <= half.z && Mathf.Abs(local.y) <= half.y + 1f;
+    }
+
+    BoxCollider BoxAt(Vector3 p)
+    {
+        if (InBox(area, p)) return area;
+        if (extraAreas != null) foreach (BoxCollider b in extraAreas) if (InBox(b, p)) return b;
+        return area;
+    }
+
+    IEnumerable<BoxCollider> Boxes()
+    {
+        if (area != null) yield return area;
+        if (extraAreas != null) foreach (BoxCollider b in extraAreas) if (b != null) yield return b;
     }
 
     // a room that is about to seal or already sealed
     public static bool IsDangerous(Vector3 p)
     {
         foreach (EnvironmentalHazard h in all) if (h != null && h.State != Phase.Idle && h.Contains(p)) return true;
+        return false;
+    }
+
+    // the same, for one particular AI player: one who 'didn't notice' this hazard doesn't treat it as dangerous
+    public static bool IsDangerous(Vector3 p, Component who)
+    {
+        foreach (EnvironmentalHazard h in all)
+            if (h != null && h.State != Phase.Idle && h.Contains(p) && !(who != null && h.careless.Contains(who))) return true;
         return false;
     }
 
@@ -186,7 +278,7 @@ public class EnvironmentalHazard : MonoBehaviour
         if (!found && (doorways == null || doorways.Length == 0) && area != null)
         {
             // no doors (an open area): just outside the middle of each side of the box
-            Bounds bb = area.bounds;
+            Bounds bb = BoxAt(from).bounds;
             Vector3[] sides = { new Vector3(bb.min.x - 1f, bb.center.y, bb.center.z), new Vector3(bb.max.x + 1f, bb.center.y, bb.center.z),
                                 new Vector3(bb.center.x, bb.center.y, bb.min.z - 1f), new Vector3(bb.center.x, bb.center.y, bb.max.z + 1f) };
             foreach (Vector3 s in sides)
@@ -231,6 +323,107 @@ public class EnvironmentalHazard : MonoBehaviour
             yield return null;
         }
         if (fx != null) fx.localScale = end;
+    }
+
+    AudioSource PlayWarningSound()
+    {
+        if (warningSound == null || area == null) return null;
+        GameObject s = new GameObject("HazardAlarm");
+        s.transform.SetParent(transform, false);
+        s.transform.position = area.bounds.center;
+        AudioSource src = s.AddComponent<AudioSource>();
+        src.clip = warningSound;
+        src.loop = true;
+        src.spatialBlend = 1f;               // it comes from the room
+        src.rolloffMode = AudioRolloffMode.Linear;
+        src.minDistance = 3f;
+        src.maxDistance = 22f;               // heard across the house, clearly louder near the room
+        src.volume = warningSoundVolume;
+        src.Play();
+        return src;
+    }
+
+    void PlayIgnite()
+    {
+        if (igniteSound != null && area != null) AudioSource.PlayClipAtPoint(igniteSound, area.bounds.center, igniteSoundVolume);
+    }
+
+    IEnumerator FadeOutAndStop(AudioSource src, float time)
+    {
+        float from = src.volume, t = 0f;
+        while (t < time && src != null) { t += Time.deltaTime; src.volume = Mathf.Lerp(from, 0f, t / time); yield return null; }
+        if (src != null) Destroy(src.gameObject);
+    }
+
+    // where the clip is loudest (seconds from its start), so it can be lined up with the seal
+    static readonly Dictionary<AudioClip, float> peaks = new Dictionary<AudioClip, float>();
+    static float PeakTime(AudioClip c)
+    {
+        float p;
+        if (peaks.TryGetValue(c, out p)) return p;
+        p = 0f;
+        try
+        {
+            if (c.loadState != AudioDataLoadState.Loaded) c.LoadAudioData();
+            float[] d = new float[c.samples * c.channels];
+            if (c.GetData(d, 0))
+            {
+                float max = 0f;
+                for (int i = 0; i < c.samples; i += 64)
+                {
+                    float v = Mathf.Abs(d[i * c.channels]);
+                    if (v > max) { max = v; p = i / (float)c.frequency; }
+                }
+            }
+        }
+        catch { p = 0f; }
+        peaks[c] = p;
+        return p;
+    }
+
+    IEnumerator FadeIn(AudioSource src, float to, float time)
+    {
+        float t = 0f;
+        while (t < time && src != null) { t += Time.deltaTime; src.volume = Mathf.Lerp(0f, to, t / time); yield return null; }
+        if (src != null) src.volume = to;
+    }
+
+    // scattered flames on top of the main effect: random spots, sizes and start times so nothing pulses together
+    IEnumerator SpawnExtraEffects()
+    {
+        if (area == null) yield break;
+        Bounds b = area.bounds;
+        var order = new List<float>();
+        for (int i = 0; i < extraEffectCount; i++) order.Add(Random.Range(extraEffectDelay.x, extraEffectDelay.y));
+        order.Sort();
+        float waited = 0f;
+        for (int i = 0; i < extraEffectCount; i++)
+        {
+            if (order[i] > waited) { yield return new WaitForSeconds(order[i] - waited); waited = order[i]; }
+            // spread out: each flame gets its own slice of the area, then a random spot inside it
+            float u = Mathf.Lerp(0.15f, 0.85f, (i + Random.Range(0.1f, 0.9f)) / extraEffectCount);
+            float v = Random.Range(0.18f, 0.82f);
+            bool alongX = b.size.x >= b.size.z;
+            Vector3 p = new Vector3(Mathf.Lerp(b.min.x, b.max.x, alongX ? u : v), b.min.y + effectHeight, Mathf.Lerp(b.min.z, b.max.z, alongX ? v : u));
+            GameObject fx = Instantiate(extraEffectPrefab, p, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), transform);
+            clouds.Add(fx);
+            fx.transform.localScale = Vector3.one * Random.Range(extraEffectSize.x, extraEffectSize.y);
+            foreach (MonoBehaviour mb in fx.GetComponentsInChildren<MonoBehaviour>(true))
+                if (mb.GetType().Name == "CFXR_Effect") Destroy(mb);
+            bool smoke = Random.value < extraSmokeChance;
+            float speed = Random.Range(0.85f, 1.15f);
+            foreach (ParticleSystem ps in fx.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (ps.name.Contains("Smoke") && !smoke) { ps.gameObject.SetActive(false); continue; }
+                var main = ps.main;
+                main.loop = true;
+                main.stopAction = ParticleSystemStopAction.None;
+                main.simulationSpeed = speed; // slightly different rhythm per flame
+                if (effectTint.a > 0f && !ps.name.Contains("Smoke")) { Color c = effectTint; c.a = main.startColor.color.a; main.startColor = c; }
+                if (ps.name.Contains("Smoke") && smokeTint.a > 0f) { Color c = smokeTint; c.a = main.startColor.color.a * 0.6f; main.startColor = c; var col = ps.colorOverLifetime; col.enabled = false; }
+                ps.Play();
+            }
+        }
     }
 
     // the cones fall into place from above with a little bounce
@@ -284,6 +477,12 @@ public class EnvironmentalHazard : MonoBehaviour
             Transform at = warningEffectPoint != null ? warningEffectPoint : (roomLights != null && roomLights.Length > 0 && roomLights[0] != null ? roomLights[0].transform : transform);
             warnFx = Instantiate(warningEffectPrefab, at.position, warningEffectPoint != null ? warningEffectPoint.rotation : Quaternion.identity, transform);
             KeepGoing(warnFx);
+            if (warningEffectOpacity < 1f)
+                foreach (ParticleSystem ps in warnFx.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var main = ps.main;
+                    Color c = main.startColor.color; c.a *= warningEffectOpacity; main.startColor = c;
+                }
             if (!Mathf.Approximately(warningEffectScale, 1f))
                 foreach (ParticleSystem ps in warnFx.GetComponentsInChildren<ParticleSystem>(true))
                 {
@@ -292,10 +491,14 @@ public class EnvironmentalHazard : MonoBehaviour
                     main.startSizeMultiplier *= warningEffectScale;
                 }
         }
+        AudioSource alarm = PlayWarningSound();
+        float lead = igniteSound != null ? PeakTime(igniteSound) : 0f;
+        bool igniteStarted = false;
         float end = Time.time + warningSeconds;
         bool on = true;
         while (Time.time < end)
         {
+            if (!igniteStarted && igniteSound != null && Time.time >= end - lead) { igniteStarted = true; PlayIgnite(); }
             if (lightWarning == LightWarning.None)
             {
                 yield return null;
@@ -315,6 +518,8 @@ public class EnvironmentalHazard : MonoBehaviour
                 yield return new WaitForSeconds(Random.Range(0.03f, Mathf.Lerp(0.15f, 0.06f, k)));
             }
         }
+        if (!igniteStarted && igniteSound != null) PlayIgnite();
+        if (alarm != null) StartCoroutine(FadeOutAndStop(alarm, 0.25f));
         if (warnFx != null)
         {
             foreach (ParticleSystem ps in warnFx.GetComponentsInChildren<ParticleSystem>(true)) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
@@ -356,9 +561,30 @@ public class EnvironmentalHazard : MonoBehaviour
         if (doorways != null) foreach (LockableDoorway d in doorways) if (d != null) d.LockForever(shutterColor);
         if (barriers != null) foreach (GameObject g in barriers) if (g != null) g.SetActive(true);
         if (dropObjects != null && dropObjects.Length > 0) StartCoroutine(DropObjects());
-        if (sealSound != null && area != null) AudioSource.PlayClipAtPoint(sealSound, area.bounds.center);
+        if (sealSound != null && area != null)
+        {
+            if (loopSealSound)
+            {
+                // a looping sound in the area, heard nearby and fading with distance; fades in over a second
+                GameObject s = new GameObject("HazardLoopSound");
+                s.transform.SetParent(transform, false);
+                s.transform.position = area.bounds.center;
+                AudioSource src = s.AddComponent<AudioSource>();
+                src.clip = sealSound;
+                src.loop = true;
+                src.spatialBlend = 1f;
+                src.rolloffMode = AudioRolloffMode.Linear;
+                src.minDistance = 2f;
+                src.maxDistance = 12f;
+                src.volume = 0f;
+                src.Play();
+                StartCoroutine(FadeIn(src, sealSoundVolume, 1f));
+            }
+            else AudioSource.PlayClipAtPoint(sealSound, area.bounds.center, sealSoundVolume);
+        }
 
         SpawnEffects();
+        if (extraEffectPrefab != null && extraEffectCount > 0) StartCoroutine(SpawnExtraEffects());
         if (darkenAfterSeal > 0f) StartCoroutine(Darken());
 
         // everyone still inside dies
@@ -372,8 +598,11 @@ public class EnvironmentalHazard : MonoBehaviour
                 GameObject v = Instantiate(victimEffectPrefab, h.transform.position + Vector3.up * 1.2f, Quaternion.identity);
                 Destroy(v, 4f);
             }
-            h.Freeze();
+            KillHider(h);
         }
+
+        BlockNavArea();
+        if (lightningStrikes) StartCoroutine(AmbientStrikes());
 
         // the killer is not affected, he just gets pushed out of the room
         foreach (EnemyVision k in FindObjectsByType<EnemyVision>(FindObjectsSortMode.None))
@@ -390,7 +619,52 @@ public class EnvironmentalHazard : MonoBehaviour
     void SpawnEffects()
     {
         if (effectPrefab == null || area == null) return;
-        Bounds b = area.bounds;
+        foreach (BoxCollider box in Boxes()) SpawnEffectsIn(box);
+        if (backgroundAreas != null) foreach (BoxCollider bg in backgroundAreas) SpawnBackground(bg);
+    }
+
+    void SpawnBackground(BoxCollider box)
+    {
+        if (box == null) return;
+        Vector3 c = box.transform.TransformPoint(box.center);
+        Vector3 s = Vector3.Scale(box.size, box.transform.lossyScale);
+        GameObject one = Instantiate(effectPrefab, new Vector3(c.x, c.y - s.y * 0.5f + backgroundHeight, c.z), effectPrefab.transform.rotation, transform);
+        one.name = "BackgroundEffect";
+        clouds.Add(one);
+        foreach (MonoBehaviour mb in one.GetComponentsInChildren<MonoBehaviour>(true))
+            if (mb.GetType().Name == "CFXR_Effect") Destroy(mb);
+        foreach (ParticleSystem ps in one.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = ps.main;
+            main.loop = true;
+            main.stopAction = ParticleSystemStopAction.None;
+            LightRain(ps, Mathf.Abs(s.x), Mathf.Abs(s.z), backgroundDensity, backgroundHeight);
+            if (effectTint.a > 0f) main.startColor = effectTint;
+            ps.Play();
+        }
+    }
+
+    void SpawnEffectsIn(BoxCollider box)
+    {
+        Bounds b = box.bounds;
+        if (effectFitToArea)
+        {
+            Vector3 top = new Vector3(b.center.x, b.min.y + effectHeight, b.center.z);
+            GameObject one = Instantiate(effectPrefab, top, effectPrefab.transform.rotation, transform);
+            clouds.Add(one);
+            foreach (MonoBehaviour mb in one.GetComponentsInChildren<MonoBehaviour>(true))
+                if (mb.GetType().Name == "CFXR_Effect") Destroy(mb);
+            foreach (ParticleSystem ps in one.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var main = ps.main;
+                main.loop = true;
+                main.stopAction = ParticleSystemStopAction.None;
+                LightRain(ps, b.size.x, b.size.z, effectDensity, effectHeight);
+                if (effectTint.a > 0f) { Color c = effectTint; c.a = main.startColor.color.a; main.startColor = c; }
+                ps.Play();
+            }
+            return;
+        }
         int n = Mathf.Max(1, effectCount);
         for (int i = 0; i < n; i++)
         {
@@ -422,6 +696,9 @@ public class EnvironmentalHazard : MonoBehaviour
             clouds.Add(fx);
             float own = 1f + Random.Range(-effectSizeVariation, effectSizeVariation);
             bool keepSmoke = Random.value < smokeChance;
+            if (effectNoEmbers)
+                foreach (ParticleSystem sp in fx.GetComponentsInChildren<ParticleSystem>(true))
+                    if (sp.name.Contains("Ember") || sp.name.Contains("Spark")) sp.gameObject.SetActive(false);
             foreach (ParticleSystem sp in fx.GetComponentsInChildren<ParticleSystem>(true))
                 if (!keepSmoke && sp.name.Contains("Smoke")) sp.gameObject.SetActive(false);
             if (effectHeightScale < 1f)
@@ -462,6 +739,172 @@ public class EnvironmentalHazard : MonoBehaviour
                 shape.radius *= effectScale;
                 ps.Play();
             }
+        }
+    }
+
+    // keep the killer (and most AI players) out: take the hazard's navmesh area off their walkable areas
+    void BlockNavArea()
+    {
+        if (string.IsNullOrEmpty(navArea)) return;
+        int idx = NavMesh.GetAreaFromName(navArea);
+        if (idx < 0) return;
+        int bit = 1 << idx;
+        foreach (EnemyVision k in FindObjectsByType<EnemyVision>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            NavMeshAgent a = k.GetComponent<NavMeshAgent>();
+            if (a != null) a.areaMask &= ~bit;
+        }
+        foreach (AIHider ai in FindObjectsByType<AIHider>(FindObjectsSortMode.None))
+        {
+            if (Random.value < aiMistakeChance) { careless.Add(ai); continue; } // this one may still wander in
+            NavMeshAgent a = ai.GetComponent<NavMeshAgent>();
+            if (a != null) a.areaMask &= ~bit;
+        }
+    }
+
+    // deadly while active: anyone (player or AI) who steps in dies
+    // kills a hider; in a thunderstorm a bolt hits them first
+    void KillHider(Hider h)
+    {
+        if (lightningStrikes) Strike(h.transform.position);
+        h.Freeze();
+    }
+
+    IEnumerator AmbientStrikes()
+    {
+        if (ambientStrikeInterval.y <= 0f) yield break;
+        while (State == Phase.Sealed)
+        {
+            yield return new WaitForSeconds(Random.Range(ambientStrikeInterval.x, ambientStrikeInterval.y));
+            if (State != Phase.Sealed) yield break;
+            List<BoxCollider> boxes = new List<BoxCollider>(Boxes());
+            if (boxes.Count == 0) yield break;
+            Bounds b = boxes[Random.Range(0, boxes.Count)].bounds;
+            Vector3 p = new Vector3(Random.Range(b.min.x + 0.3f, b.max.x - 0.3f), b.max.y, Random.Range(b.min.z + 0.3f, b.max.z - 0.3f));
+            RaycastHit hit;
+            p.y = Physics.Raycast(p + Vector3.up * 3f, Vector3.down, out hit, 10f, ~0, QueryTriggerInteraction.Ignore) ? hit.point.y : b.min.y;
+            Strike(p);
+        }
+    }
+
+    // one lightning bolt landing on 'ground'
+    void Strike(Vector3 ground)
+    {
+        StartCoroutine(Bolt(ground));
+        if (strikeEffectPrefab != null) { GameObject e = Instantiate(strikeEffectPrefab, ground + Vector3.up * 0.3f, Quaternion.identity); Destroy(e, 4f); }
+        if (strikeFlashPrefab != null) { GameObject e = Instantiate(strikeFlashPrefab, ground + Vector3.up * 1f, Quaternion.identity); Destroy(e, 3f); }
+        if (strikeSound != null)
+        {
+            GameObject s = new GameObject("ThunderStrike");
+            s.transform.position = ground;
+            AudioSource src = s.AddComponent<AudioSource>();
+            src.clip = strikeSound; src.volume = strikeSoundVolume; src.spatialBlend = 0.6f; src.minDistance = 6f; src.maxDistance = 40f;
+            src.Play();
+            Destroy(s, strikeSound.length + 0.2f);
+        }
+    }
+
+    IEnumerator Bolt(Vector3 ground)
+    {
+        if (boltMaterial == null)
+        {
+            Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (sh == null) sh = Shader.Find("Sprites/Default");
+            boltMaterial = new Material(sh);
+        }
+        GameObject go = new GameObject("LightningBolt");
+        go.transform.SetParent(transform, true);
+        LineRenderer main = MakeLine(go, 0.14f);
+        LineRenderer branch = MakeLine(new GameObject("Branch"), 0.06f);
+        branch.transform.SetParent(go.transform, true);
+
+        Light glow = new GameObject("BoltLight").AddComponent<Light>();
+        glow.transform.SetParent(go.transform, true);
+        glow.transform.position = ground + Vector3.up * 1.5f;
+        glow.type = LightType.Point; glow.color = boltColor; glow.range = 10f; glow.intensity = 12f;
+
+        Vector3 top = ground + new Vector3(Random.Range(-1.5f, 1.5f), boltHeight, Random.Range(-1.5f, 1.5f));
+        float t = 0f, life = 0.45f, nextJag = 0f;
+        while (t < life)
+        {
+            if (t >= nextJag) // re-jag a few times so it crackles
+            {
+                Jag(main, top, ground, 12, 0.45f);
+                Vector3 from = Vector3.Lerp(top, ground, Random.Range(0.3f, 0.6f));
+                Jag(branch, from, from + new Vector3(Random.Range(-2f, 2f), -Random.Range(1.5f, 3f), Random.Range(-2f, 2f)), 6, 0.3f);
+                nextJag = t + 0.07f;
+            }
+            float k = 1f - t / life;
+            float flick = (Random.value > 0.3f) ? 1f : 0.25f;
+            Color c = boltColor; c.a = k * flick;
+            main.startColor = main.endColor = c;
+            branch.startColor = branch.endColor = new Color(c.r, c.g, c.b, c.a * 0.7f);
+            glow.intensity = 12f * k * flick;
+            t += Time.deltaTime;
+            yield return null;
+        }
+        Destroy(go);
+    }
+
+    LineRenderer MakeLine(GameObject go, float width)
+    {
+        LineRenderer lr = go.AddComponent<LineRenderer>();
+        lr.sharedMaterial = boltMaterial;
+        lr.useWorldSpace = true;
+        lr.startWidth = width; lr.endWidth = width * 0.4f;
+        lr.numCapVertices = 2;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        lr.receiveShadows = false;
+        return lr;
+    }
+
+    static void Jag(LineRenderer lr, Vector3 from, Vector3 to, int points, float spread)
+    {
+        lr.positionCount = points;
+        for (int i = 0; i < points; i++)
+        {
+            float f = i / (float)(points - 1);
+            Vector3 p = Vector3.Lerp(from, to, f);
+            if (i > 0 && i < points - 1) p += new Vector3(Random.Range(-spread, spread), 0f, Random.Range(-spread, spread));
+            lr.SetPosition(i, p);
+        }
+    }
+
+    // Cheap rain over an area: no physics collisions or splash sub-emitters, and each drop only lives
+    // long enough to reach the floor, so far fewer particles exist at once.
+    static void LightRain(ParticleSystem ps, float sizeX, float sizeZ, float density, float height)
+    {
+        var main = ps.main;
+        var shape = ps.shape;
+        shape.scale = new Vector3(sizeX, sizeZ, 1f);
+        var col = ps.collision; col.enabled = false;
+        var sub = ps.subEmitters; sub.enabled = false;
+        float speed = Mathf.Max(1f, main.startSpeed.constantMax);
+        float life = Mathf.Clamp((height + 0.3f) / speed, 0.1f, Mathf.Max(0.1f, main.startLifetime.constantMax));
+        main.startLifetime = life;
+        float rate = Mathf.Max(5f, sizeX * sizeZ * density);
+        var em = ps.emission;
+        em.rateOverTimeMultiplier = rate;
+        main.maxParticles = Mathf.CeilToInt(rate * life * 1.3f) + 10;
+    }
+
+    Hider[] watched;
+    float nextCheck;
+
+    void Update()
+    {
+        if (!deadlyWhileActive || State != Phase.Sealed) return;
+        // 10 checks a second is plenty, and the player list is looked up once instead of every frame
+        if (Time.time < nextCheck) return;
+        nextCheck = Time.time + 0.1f;
+        if (watched == null) watched = FindObjectsByType<Hider>(FindObjectsSortMode.None);
+        foreach (Hider h in watched)
+        {
+            if (h == null || h.IsCaught || !Contains(h.transform.position)) continue;
+            foreach (HidingSpot s in FindObjectsByType<HidingSpot>(FindObjectsSortMode.None))
+                if (s.Occupant == h) { s.Exit(h); break; }
+            if (victimEffectPrefab != null) { GameObject v = Instantiate(victimEffectPrefab, h.transform.position + Vector3.up * 1.2f, Quaternion.identity); Destroy(v, 4f); }
+            KillHider(h);
         }
     }
 

@@ -41,8 +41,6 @@ public class ItemSpawner : MonoBehaviour
     public float itemSpacing = 5f;
     [Tooltip("Points used for the last few drops are skipped, so items move around the house.")]
     public int rememberLastPoints = 4;
-    [Tooltip("Each drop lands up to this far from its spawn point (on the floor), so spots vary.")]
-    public float jitterRadius = 0.7f;
 
     private readonly System.Collections.Generic.Queue<Transform> recentPoints = new System.Collections.Generic.Queue<Transform>();
 
@@ -51,6 +49,14 @@ public class ItemSpawner : MonoBehaviour
 
     void Start()
     {
+        // blackout round: fewer items, some kinds left out
+        if (BlackoutRound.ThisRound)
+        {
+            itemsAtStart = BlackoutRound.Instance.itemsAtStart;
+            maxItemsOnMap = BlackoutRound.Instance.maxItemsOnMap;
+            if (collectiblePrefabs != null) collectiblePrefabs = System.Array.FindAll(collectiblePrefabs, p => !BlackoutRound.Excluded(p));
+            if (instantPrefabs != null) instantPrefabs = System.Array.FindAll(instantPrefabs, p => !BlackoutRound.Excluded(p));
+        }
         // drop the starting items right away (each one still respects the limits and spacing)
         for (int i = 0; i < itemsAtStart; i++)
             if (CountCollectibles() + CountInstants() < maxItemsOnMap) SpawnRandomItem();
@@ -131,6 +137,7 @@ public class ItemSpawner : MonoBehaviour
         if (!PickSpawnPosition(out spawnPos)) return;
 
         GameObject item = Instantiate(prefab, spawnPos, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
+        if (BlackoutRound.ThisRound) BlackoutRound.AddGlow(item); // faint glow so it can be found in the dark
         if (instant)
         {
             int layer = LayerMask.NameToLayer(instantLayerName);
@@ -140,7 +147,6 @@ public class ItemSpawner : MonoBehaviour
 
     // A random free spot, preferring points far from the items already lying around so they stay spread out.
     // Free = no item within itemSpacing, nobody standing next to it, not one of the last few points used.
-    // The drop is also nudged a little around the point so items don't always land on the exact same spot.
     bool PickSpawnPosition(out Vector3 pos)
     {
         pos = Vector3.zero;
@@ -188,15 +194,7 @@ public class ItemSpawner : MonoBehaviour
         recentPoints.Enqueue(pick);
         while (recentPoints.Count > Mathf.Min(rememberLastPoints, spawnPoints.Length - 1)) recentPoints.Dequeue();
 
-        pos = pick.position;
-        if (jitterRadius > 0f)
-        {
-            Vector2 j = Random.insideUnitCircle * jitterRadius;
-            UnityEngine.AI.NavMeshHit hit;
-            if (UnityEngine.AI.NavMesh.SamplePosition(pos + new Vector3(j.x, 0f, j.y), out hit, 0.5f, UnityEngine.AI.NavMesh.AllAreas) &&
-                Flat(hit.position, pos) <= jitterRadius + 0.1f)
-                pos = new Vector3(hit.position.x, pick.position.y, hit.position.z); // keep the point's height
-        }
+        pos = pick.position; // exactly where the spawn point was placed
         return true;
     }
 

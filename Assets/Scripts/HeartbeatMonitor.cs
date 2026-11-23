@@ -67,6 +67,7 @@ public class HeartbeatMonitor : MonoBehaviour
     NavMeshPath path;
 
     public float Level { get { return level; } }
+    public float Pulse { get { return pulse; } } // 1 right on a beat, fading to 0
     public float CurrentBpm { get { return Mathf.Lerp(restBpm, maxBpm, level); } }
     public float FeltDistanceToKiller { get { return feltDistance; } }
     public bool WallBetween { get { return wallBetween; } }
@@ -106,7 +107,9 @@ public class HeartbeatMonitor : MonoBehaviour
         {
             pathTimer -= dt;
             if (pathTimer <= 0f) { pathTimer = pathInterval; feltDistance = MeasureDistance(); }
-            target = Mathf.Pow(Mathf.InverseLerp(calmDistance, panicDistance, feltDistance), panicCurve);
+            // blackout: in the dark the heart starts racing from further away
+            float calm = BlackoutRound.Active ? calmDistance * 1.4f : calmDistance;
+            target = Mathf.Pow(Mathf.InverseLerp(calm, panicDistance, feltDistance), panicCurve);
             // Being chased or stabbed: the heart is racing regardless of the distance.
             if (enemy.CurrentTarget == hider) target = 1f;
         }
@@ -174,7 +177,7 @@ public class HeartbeatMonitor : MonoBehaviour
         if (beatClip == null) return;
         source.Stop();
         source.clip = beatClip;
-        source.volume = Mathf.Lerp(restVolume, maxVolume, level);
+        source.volume = Mathf.Min(1f, Mathf.Lerp(restVolume, maxVolume, level) * (BlackoutRound.Active ? 1.5f : 1f)); // louder in the blackout
         source.pitch = Mathf.Lerp(restPitch, maxPitch, level);
         source.time = Mathf.Clamp(clipStartOffset, 0f, beatClip.length - 0.05f);
         source.Play();

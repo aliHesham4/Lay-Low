@@ -9,7 +9,7 @@ public class LaughEffect : MonoBehaviour
     [Tooltip("Seconds after the animation starts until the laugh is heard.")]
     public float soundDelay = 0.15f;
     [Tooltip("Seconds the tickled player stands still laughing.")]
-    public float lockDuration = 2.5f;
+    public float lockDuration = 1.5f;
 
     Hider hider;
     Animator animator;

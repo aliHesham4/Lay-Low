@@ -100,7 +100,7 @@ public class PlayerMarker : MonoBehaviour
     void LateUpdate()
     {
         if (outline == null || hider == null) return;
-        bool show = !hider.isHumanControlled && !hider.IsCaught && !hider.IsHidden;
+        bool show = !hider.isHumanControlled && !hider.IsCaught && !hider.IsHidden && BlackoutRound.MarkersAllowed; // blackout: only while spectating
 
         // the closer you (the human player) get, the fainter the marker, until it disappears
         float fade = MarkerFade();
@@ -111,7 +111,7 @@ public class PlayerMarker : MonoBehaviour
 
         // hiding: light up the spot they are in (other players only, never your own)
         HidingSpot spot = null;
-        if (highlightHidingSpot && spotOutline != null && !hider.isHumanControlled && !hider.IsCaught && hider.IsHidden)
+        if (highlightHidingSpot && spotOutline != null && BlackoutRound.MarkersAllowed && !hider.isHumanControlled && !hider.IsCaught && hider.IsHidden)
             spot = SpotOf(hider);
         if (spot != shownSpot)
         {

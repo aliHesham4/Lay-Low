@@ -180,7 +180,7 @@ public class AICollectibleSeeker : MonoBehaviour
         if (mode != Mode.Idle)
         {
             Vector3 goal = targetItem != null ? targetItem.transform.position : (instantTarget != null ? instantTarget.transform.position : transform.position);
-            if (EnvironmentalHazard.IsDangerous(transform.position) || EnvironmentalHazard.IsDangerous(goal))
+            if (EnvironmentalHazard.IsDangerous(transform.position, this) || EnvironmentalHazard.IsDangerous(goal, this))
             {
                 Release();
                 nextSeek = Time.time + seekInterval;
@@ -273,7 +273,7 @@ public class AICollectibleSeeker : MonoBehaviour
         if (item == null || !item.activeInHierarchy) return;
         Vector3 p = item.transform.position;
         if (IsNearKiller(p) || IsNearHuman(p)) return;
-        if (EnvironmentalHazard.IsDangerous(p)) return; // inside a room that is sealing / sealed
+        if (EnvironmentalHazard.IsDangerous(p, this)) return; // inside a room that is sealing / sealed
 
         float myDist = Vector3.Distance(transform.position, p);
         if (myDist >= bestDist) return;
