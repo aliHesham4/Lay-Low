@@ -104,7 +104,7 @@ public class RoundManager : MonoBehaviour
     public void ReportCaught(Hider caught)
     {
         if (roundOver) return;
-        Toast(caught.displayName + " was caught!");
+        Toast(caught.KilledBy != null ? caught.displayName + " was stabbed by " + caught.KilledBy.displayName + "!" : caught.displayName + " was caught!");
 
         // count who is still free: nobody -> everyone was caught; only one left -> they are the last one standing
         int players = 0, free = 0;
@@ -116,7 +116,7 @@ public class RoundManager : MonoBehaviour
             if (!h.IsCaught) { free++; survivor = h; }
         }
         if (free == 0) EndRound("Everyone was caught!");
-        else if (free == 1 && players > 1) EndRound(survivor.displayName + " is the last one standing!");
+        else if (free == 1 && players > 1) EndRound(survivor.GetComponent<KnifeHolder>() != null ? survivor.displayName + " is coming home alive!" : survivor.displayName + " is the last one standing!");
     }
 
     void EndRound(string reason)
@@ -193,7 +193,7 @@ public class RoundManager : MonoBehaviour
 
     // ---------------- UI ----------------
 
-    void Toast(string msg)
+    public void Toast(string msg)
     {
         if (toastText == null) return;
         toastText.text = msg;

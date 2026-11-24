@@ -108,6 +108,8 @@ public class EnvironmentalHazard : MonoBehaviour
     [Tooltip("Optional smaller effects scattered over the area on top of the main one (e.g. CFXR Fire), each a different size and out of step.")]
     public GameObject extraEffectPrefab;
     public int extraEffectCount = 0;
+    [Tooltip("Optional: place flames by hand. Each Transform here is one flame: its position is where it burns and its Scale X sizes it (1 = normal). When this list has entries, the random flames are not used. They light up in order of distance from Spill Origin, nearest first.")]
+    public Transform[] fireSpots;
     [Tooltip("Random size range of the extra flames.")]
     public Vector2 extraEffectSize = new Vector2(0.5f, 1f);
     [Tooltip("Each extra flame starts after a random delay in this range (seconds after the seal).")]
@@ -389,25 +391,112 @@ public class EnvironmentalHazard : MonoBehaviour
     }
 
     // scattered flames on top of the main effect: random spots, sizes and start times so nothing pulses together
+    [Header("Fire spilling out of an opening")]
+    [Tooltip("Optional: the opening the fire comes out of (its blue Z arrow points into the room). The main fire sits here and the extra flames fan out onto the floor in front of it.")]
+    public Transform spillOrigin;
+    [Tooltip("How far into the room the flames reach (metres).")]
+    public float spillLength = 2.2f;
+    [Tooltip("How wide the fan of flames opens (degrees).")]
+    public float spillAngle = 80f;
+    [Tooltip("Layers that count as floor: flames only land there, never on furniture.")]
+    public LayerMask spillFloorMask = 1 << 9;
+
+    // furniture standing in the room (couch, tables...), even pieces without a collider: flames keep off their footprint
+    List<Bounds> furniture;
+    bool OnFurniture(Vector3 p)
+    {
+        if (furniture == null)
+        {
+            furniture = new List<Bounds>();
+            Bounds room = area.bounds;
+            room.Expand(new Vector3(0.5f, 2f, 0.5f));
+            int wall = LayerMask.NameToLayer("Wall"), floor = LayerMask.NameToLayer("Floor");
+            foreach (MeshRenderer r in FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+            {
+                if (!r.enabled || r.gameObject.layer == wall || r.gameObject.layer == floor) continue;
+                if (r.transform.IsChildOf(transform) || r.GetComponentInParent<Hider>() != null) continue;
+                Bounds b = r.bounds;
+                if (!room.Intersects(b) || b.size.y < 0.25f || b.min.y > room.min.y + 2.6f) continue; // flat rugs are fine
+                if (b.size.x > 4f || b.size.z > 4f) continue; // whole-room pieces
+                furniture.Add(b);
+            }
+        }
+        foreach (Bounds b in furniture)
+            if (p.x > b.min.x - 0.1f && p.x < b.max.x + 0.1f && p.z > b.min.z - 0.1f && p.z < b.max.z + 0.1f) return true;
+        return false;
+    }
+
+    // a spot on the floor in front of the opening for flame i; size shrinks with distance
+    bool SpillPoint(int i, out Vector3 p, out float size)
+    {
+        p = Vector3.zero; size = 1f;
+        Vector3 fwd = spillOrigin.forward; fwd.y = 0f; fwd.Normalize();
+        for (int attempt = 0; attempt < 8; attempt++)
+        {
+            // spread the flames evenly over the distance, nearest ones first
+            float k = Mathf.Clamp01((i + Random.Range(0.1f, 0.9f)) / Mathf.Max(1, extraEffectCount));
+            float dist = Mathf.Lerp(0.25f, spillLength, k);
+            float half = spillAngle * 0.5f * Mathf.Lerp(0.5f, 1f, k); // narrow at the mouth, wider further out
+            Vector3 dir = Quaternion.Euler(0f, Random.Range(-half, half), 0f) * fwd;
+            Vector3 top = spillOrigin.position + dir * dist + Vector3.up * 2.5f;
+            RaycastHit hit;
+            if (!Physics.Raycast(top, Vector3.down, out hit, 4f, ~0, QueryTriggerInteraction.Ignore)) continue;
+            if (((1 << hit.collider.gameObject.layer) & spillFloorMask.value) == 0) continue; // furniture: try another spot
+            if (!Contains(hit.point) || OnFurniture(hit.point)) continue;
+            p = hit.point + Vector3.up * 0.02f;
+            size = Mathf.Lerp(1f, 0.45f, k);
+            return true;
+        }
+        return false;
+    }
+
     IEnumerator SpawnExtraEffects()
     {
         if (area == null) yield break;
         Bounds b = area.bounds;
         var order = new List<float>();
-        for (int i = 0; i < extraEffectCount; i++) order.Add(Random.Range(extraEffectDelay.x, extraEffectDelay.y));
+        Transform[] manual = null;
+        if (fireSpots != null)
+        {
+            var list = new List<Transform>();
+            foreach (Transform s in fireSpots) if (s != null) list.Add(s);
+            if (list.Count > 0)
+            {
+                Vector3 from = spillOrigin != null ? spillOrigin.position : transform.position;
+                list.Sort((x, y) => (x.position - from).sqrMagnitude.CompareTo((y.position - from).sqrMagnitude));
+                manual = list.ToArray();
+            }
+        }
+        int total = manual != null ? manual.Length : extraEffectCount;
+        for (int i = 0; i < total; i++) order.Add(Random.Range(extraEffectDelay.x, extraEffectDelay.y));
         order.Sort();
         float waited = 0f;
-        for (int i = 0; i < extraEffectCount; i++)
+        for (int i = 0; i < total; i++)
         {
             if (order[i] > waited) { yield return new WaitForSeconds(order[i] - waited); waited = order[i]; }
-            // spread out: each flame gets its own slice of the area, then a random spot inside it
-            float u = Mathf.Lerp(0.15f, 0.85f, (i + Random.Range(0.1f, 0.9f)) / extraEffectCount);
-            float v = Random.Range(0.18f, 0.82f);
-            bool alongX = b.size.x >= b.size.z;
-            Vector3 p = new Vector3(Mathf.Lerp(b.min.x, b.max.x, alongX ? u : v), b.min.y + effectHeight, Mathf.Lerp(b.min.z, b.max.z, alongX ? v : u));
+            Vector3 p;
+            float spillSize = 1f;
+            if (manual != null)
+            {
+                p = manual[i].position;
+                spillSize = manual[i].localScale.x;
+            }
+            else if (spillOrigin != null)
+            {
+                // fanning out of the opening onto the floor, smaller the further out
+                if (!SpillPoint(i, out p, out spillSize)) continue;
+            }
+            else
+            {
+                // spread out: each flame gets its own slice of the area, then a random spot inside it
+                float u = Mathf.Lerp(0.15f, 0.85f, (i + Random.Range(0.1f, 0.9f)) / extraEffectCount);
+                float v = Random.Range(0.18f, 0.82f);
+                bool alongX = b.size.x >= b.size.z;
+                p = new Vector3(Mathf.Lerp(b.min.x, b.max.x, alongX ? u : v), b.min.y + effectHeight, Mathf.Lerp(b.min.z, b.max.z, alongX ? v : u));
+            }
             GameObject fx = Instantiate(extraEffectPrefab, p, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f), transform);
             clouds.Add(fx);
-            fx.transform.localScale = Vector3.one * Random.Range(extraEffectSize.x, extraEffectSize.y);
+            fx.transform.localScale = Vector3.one * Random.Range(extraEffectSize.x, extraEffectSize.y) * spillSize;
             foreach (MonoBehaviour mb in fx.GetComponentsInChildren<MonoBehaviour>(true))
                 if (mb.GetType().Name == "CFXR_Effect") Destroy(mb);
             bool smoke = Random.value < extraSmokeChance;
@@ -584,7 +673,7 @@ public class EnvironmentalHazard : MonoBehaviour
         }
 
         SpawnEffects();
-        if (extraEffectPrefab != null && extraEffectCount > 0) StartCoroutine(SpawnExtraEffects());
+        if (extraEffectPrefab != null && (extraEffectCount > 0 || (fireSpots != null && fireSpots.Length > 0))) StartCoroutine(SpawnExtraEffects());
         if (darkenAfterSeal > 0f) StartCoroutine(Darken());
 
         // everyone still inside dies
@@ -692,7 +781,9 @@ public class EnvironmentalHazard : MonoBehaviour
                     ? new Vector3(Mathf.Lerp(b.min.x, b.max.x, t), b.min.y + effectHeight, b.center.z)
                     : new Vector3(b.center.x, b.min.y + effectHeight, Mathf.Lerp(b.min.z, b.max.z, t));
             }
-            GameObject fx = Instantiate(effectPrefab, p, effectRandomRotation ? Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) : transform.rotation, transform);
+            if (spillOrigin != null) p = spillOrigin.position + Vector3.up * effectHeight; // the main fire sits in the opening
+            Quaternion rot = spillOrigin != null ? spillOrigin.rotation : (effectRandomRotation ? Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) : transform.rotation);
+            GameObject fx = Instantiate(effectPrefab, p, rot, transform);
             clouds.Add(fx);
             float own = 1f + Random.Range(-effectSizeVariation, effectSizeVariation);
             bool keepSmoke = Random.value < smokeChance;

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 // so it reads the same in first person and third person.
 public class HidePrompt : MonoBehaviour
 {
-    public enum Mode { Hide, ComeOut, Occupied }
+    public enum Mode { Hide, ComeOut, Occupied, Stab }
 
     private static HidePrompt instance;
     public static HidePrompt Instance
@@ -117,7 +117,7 @@ public class HidePrompt : MonoBehaviour
         messageText.gameObject.SetActive(taken);
 
         panelImage.color = taken ? PanelTaken : PanelNormal;
-        postText.text = newMode == Mode.ComeOut ? "to come out" : "to hide";
+        postText.text = newMode == Mode.ComeOut ? "to come out" : (newMode == Mode.Stab ? "to open and stab" : "to hide");
     }
 
     void Update()

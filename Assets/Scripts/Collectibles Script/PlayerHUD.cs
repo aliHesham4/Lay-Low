@@ -21,6 +21,7 @@ public class PlayerHUD : MonoBehaviour
 
     [Header("Score (1 point for surviving a round)")]
     public int score = 0;
+    [HideInInspector] public bool goldScore; // Round 4: the knife holder's score box is gold
     public TextMeshProUGUI scoreText;
 
     [Header("Caught State")]
@@ -98,7 +99,7 @@ public class PlayerHUD : MonoBehaviour
     public void SetScore(int value)
     {
         score = value;
-        if (scoreText != null) scoreText.text = "<size=34%><color=#CCCCCC>SCORE</color></size>\n" + score;
+        if (scoreText != null) scoreText.text = "<size=34%>" + (goldScore ? "<color=#6B3E00>" : "<color=#CCCCCC>") + "SCORE</color></size>\n" + score;
     }
 
     void ShowCaught()

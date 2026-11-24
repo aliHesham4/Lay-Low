@@ -34,6 +34,17 @@ public class HazardAlertUI : MonoBehaviour
         ui.countdown.gameObject.SetActive(true);
     }
 
+    // a plain announcement (no 'sealed' tag), used by the golden-knife round
+    public static void ShowAnnouncement(string titleText, string messageText, float seconds)
+    {
+        HazardAlertUI ui = Get(); if (ui == null) return;
+        ui.Set(titleText, messageText, Danger, new Color(0.14f, 0.04f, 0.04f, 0.92f));
+        ui.counting = false;
+        ui.barFill.transform.parent.gameObject.SetActive(false);
+        ui.countdown.gameObject.SetActive(false);
+        ui.hideAt = Time.time + seconds;
+    }
+
     public static void ShowSealed(string titleText, string messageText)
     {
         HazardAlertUI ui = Get(); if (ui == null) return;

@@ -58,6 +58,10 @@ public class FirstPersonArms : MonoBehaviour
     public float handLightIntensity = 0.45f;
     public Color handLightColor = new Color(1f, 0.8f, 0.62f);
 
+    // extra offset for the right hand (camera space): the golden knife's stab pushes it forward
+    [HideInInspector] public Vector3 rightHandKick;
+    public Transform RightHandBone { get { return armsAnimator != null ? armsAnimator.GetBoneTransform(HumanBodyBones.RightHand) : null; } }
+
     Hider hider;
     Transform cam;
     Transform view, rig;      // fixed off-map rig: 'view' is the arms camera, hand positions are relative to it
@@ -194,7 +198,7 @@ public class FirstPersonArms : MonoBehaviour
         float s = Mathf.Sin(runPhase);
 
         Vector3 l = leftHand + runWeight * (runLower + SwingOffset(s));
-        Vector3 r = rightHand + runWeight * (runLower + SwingOffset(-s));
+        Vector3 r = rightHand + rightHandKick + runWeight * (runLower + SwingOffset(-s));
         l.x += runWeight * runInward; r.x -= runWeight * runInward;
 
         SetHand(a, AvatarIKGoal.LeftHand, l, leftHandEuler);

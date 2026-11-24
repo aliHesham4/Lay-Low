@@ -15,7 +15,19 @@ public class AIHider : MonoBehaviour
     Vector3 believedKiller = new Vector3(0f, -1000f, 0f);
     float beliefTime = -999f;
     int beliefFrame = -1;
+    // the closest danger: the killer, or whoever holds the golden knife (round 4)
     Vector3 KillerPos
+    {
+        get
+        {
+            Vector3 k = KillerPosBase;
+            Hider kh = KnifeHolder.CurrentHider;
+            if (kh != null && kh != hider && !kh.IsCaught && Vector3.Distance(kh.transform.position, transform.position) < Vector3.Distance(k, transform.position))
+                return kh.transform.position;
+            return k;
+        }
+    }
+    Vector3 KillerPosBase
     {
         get
         {
@@ -295,7 +307,7 @@ public class AIHider : MonoBehaviour
     bool IsInDanger()
     {
         if (enemy == null || !enemy.enabled) return false; // killer still inside the elevator
-        if (enemy.CurrentTarget == hider) return true;
+        if (enemy.CurrentTarget == hider || KnifeHolder.IsTargeting(hider)) return true;
         if (Time.time < startGraceUntil) return false;
         float d = Vector3.Distance(transform.position, KillerPos);
         if (d >= dangerDistance) return false;
@@ -305,7 +317,7 @@ public class AIHider : MonoBehaviour
         return d < dangerDistance * 0.5f || KillerSeesMe() || killerClosing;
     }
 
-    bool BeingChased() { return enemy != null && enemy.enabled && enemy.CurrentTarget == hider; }
+    bool BeingChased() { return (enemy != null && enemy.enabled && enemy.CurrentTarget == hider) || KnifeHolder.IsTargeting(hider); }
 
     // true when nothing solid stands between the killer and her
     bool KillerSeesMe()

@@ -80,6 +80,8 @@ public class EnemyVision : MonoBehaviour
     private float randomSpotCheckTimer;
     private Dictionary<HidingSpot, float> checkedSpots = new Dictionary<HidingSpot, float>();
     private bool spotRunning; // rushing to the spot a chased player just hid in
+    private float spotArriveTolerance = 0.2f; // how close counts as 'at the spot' (wider when the spot has a nav obstacle that keeps him back)
+    private float spotStuckTimer;
 
 
     // ---------- Distractions ----------
@@ -466,6 +468,9 @@ public class EnemyVision : MonoBehaviour
         spotRunning = running;
         agent.speed = running ? chaseSpeed : patrolSpeed;
         agent.isStopped = false;
+        spotStuckTimer = 0f;
+        // a navmesh obstacle on the spot (bathtub, bed...) pushes him away from it, so he can stop a little short of the exact point
+        spotArriveTolerance = spot.GetComponentInChildren<NavMeshObstacle>() != null ? 0.55f : 0.2f;
         agent.SetDestination(spot.GetApproachPoint());
     }
 
@@ -487,7 +492,15 @@ public class EnemyVision : MonoBehaviour
         }
 
         // Have we reached the hiding spot?
-        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.2f)
+        bool arrived = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + spotArriveTolerance;
+        // standing still very close to it (held back by an obstacle, furniture...) also counts, so he never hovers there forever
+        if (!arrived && !agent.pathPending && agent.remainingDistance <= 1.2f && agent.velocity.sqrMagnitude < 0.04f)
+        {
+            spotStuckTimer += Time.deltaTime;
+            if (spotStuckTimer > 0.6f) arrived = true;
+        }
+        else if (!arrived) spotStuckTimer = 0f;
+        if (arrived)
         {
             currentState = EnemyState.OpeningSpot;
             openingTimer = 0f;

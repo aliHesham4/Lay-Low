@@ -11,6 +11,8 @@ public class Hider : MonoBehaviour
 
     public bool IsHidden { get; private set; }
     public bool IsCaught { get; private set; }
+    // who stabbed this player (the golden knife round); null when the killer got him
+    public Hider KilledBy { get; private set; }
 
     private readonly List<Renderer> hiddenRenderers = new List<Renderer>();
     private PlayerMovement movement;
@@ -84,11 +86,21 @@ public class Hider : MonoBehaviour
         }
     }
 
+    // Called by the player holding the golden knife
+    public void FreezeBy(Hider killer)
+    {
+        if (IsCaught) return;
+        KilledBy = killer;
+        Freeze();
+    }
+
     // Called by the enemy the moment it grabs this hider
     public void Freeze()
     {
         if (IsCaught) return;
         IsCaught = true;
+        KnifeHolder holder = GetComponent<KnifeHolder>();
+        if (holder != null) holder.OnDeath(); // the golden knife drops where he fell
 
         if (health != null)
         {

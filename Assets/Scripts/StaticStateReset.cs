@@ -20,6 +20,8 @@ static class StaticStateReset
         Set("BlackoutRound", "powerOff", false);
         Set("BlackoutRound", "human", null);
         Set("BlackoutRound", "<LastFlickerTime>k__BackingField", -999f);
+        Set("KnifeHolder", "Current", null);
+        Set("FinalHuntRound", "instance", null);
         Set("HidePrompt", "instance", null);
         Set("HidePrompt", "rounded", null);
         Set("DistractionGate", "MinBreak", 10f);

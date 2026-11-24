@@ -47,6 +47,15 @@ public class BlackoutRound : MonoBehaviour
     [Tooltip("Seconds between flickers with nobody near (min, max). 0 = none.")]
     public Vector2 fakeOutInterval = new Vector2(30f, 55f);
 
+    [Header("Your light")]
+    [Tooltip("A soft pool of light on the floor around your player, in your player's colour (only the player you control).")]
+    public bool playerLight = true;
+    [Tooltip("Height above your feet the light shines down from.")]
+    public float playerLightHeight = 1.8f;
+    [Tooltip("Width of the pool of light (cone angle). Bigger = wider circle on the floor.")]
+    public float playerLightAngle = 75f;
+    public float playerLightIntensity = 1.2f;
+
     [Header("Terror: glowing eyes")]
     public bool glowingEyes = true;
     public Color eyeColor = new Color(1f, 0.05f, 0.02f);
@@ -247,6 +256,7 @@ public class BlackoutRound : MonoBehaviour
         nextFake = Time.time + Random.Range(fakeOutInterval.x, fakeOutInterval.y);
         StartCoroutine(FlickerLoop());
         StartCoroutine(Terror());
+        if (playerLight) MakePlayerLight();
     }
 
     // Every frame: a lamp near the killer stays almost dark and pops on in short flickers, a limited number per second
@@ -317,6 +327,8 @@ public class BlackoutRound : MonoBehaviour
 
         while (powerOff)
         {
+            if (myLight != null) myLight.enabled = me != null && !me.IsCaught && !me.IsHidden; // off once caught / while hiding
+
             bool dead = me == null || me.IsCaught;
             float level = (!dead && heart != null && heart.isActiveAndEnabled) ? heart.Level : 0f;
             float beat = heart != null ? heart.Pulse : 0f;
@@ -397,6 +409,28 @@ public class BlackoutRound : MonoBehaviour
             m.SetTexture("_EmissionMap", eyeGlowMask);
             m.SetColor("_EmissionColor", eyeColor * eyeGlowIntensity);
         }
+    }
+
+    Light myLight;
+
+    // a spotlight above your head pointing straight down: a soft round pool of light at your feet, in your colour
+    void MakePlayerLight()
+    {
+        Hider me = null;
+        foreach (Hider h in FindObjectsByType<Hider>(FindObjectsSortMode.None)) if (h.isHumanControlled) { me = h; break; }
+        if (me == null) return;
+        GameObject g = new GameObject("PlayerFloorLight");
+        g.transform.SetParent(me.transform, false);
+        g.transform.position = me.transform.position + Vector3.up * playerLightHeight;
+        g.transform.rotation = Quaternion.Euler(90f, 0f, 0f); // straight down
+        myLight = g.AddComponent<Light>();
+        myLight.type = LightType.Spot;
+        myLight.color = PlayerColors.For(me);
+        myLight.spotAngle = playerLightAngle;
+        myLight.innerSpotAngle = playerLightAngle * 0.2f; // wide soft edge, no hard ring
+        myLight.range = playerLightHeight + 1f;
+        myLight.intensity = playerLightIntensity;
+        myLight.shadows = LightShadows.None;
     }
 
     void BuildVignette()

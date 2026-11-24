@@ -10,6 +10,7 @@ public class PlayerMovement : MonoBehaviour
     public float turnSpeed = 180f;
     [Tooltip("Set by effects like the ice gun (1 = normal).")]
     [HideInInspector] public float speedMultiplier = 1f;
+    [HideInInspector] public float extraSpeedScale = 1f; // Round 4: the golden knife holder is a little slower
 
     [Header("Jumping & Gravity")]
     public float jumpHeight = 0.5f;       // Height for a small jump
@@ -71,7 +72,7 @@ public class PlayerMovement : MonoBehaviour
         verticalVelocity += gravity * Time.deltaTime;
 
         // 7. Execute Total Movement
-        Vector3 motion = (moveDirection * moveSpeed * speedMultiplier) + (Vector3.up * verticalVelocity);
+        Vector3 motion = (moveDirection * moveSpeed * speedMultiplier * extraSpeedScale) + (Vector3.up * verticalVelocity);
         controller.Move(motion * Time.deltaTime);
 
         // 8. Update Animator Parameter

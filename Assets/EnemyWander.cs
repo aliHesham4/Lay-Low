@@ -10,6 +10,8 @@ public class EnemyWander : MonoBehaviour
     private Animator animator; // 1. Added Animator reference
     private float timer;
     private EnemyVision vision;
+    private float stuckTime;
+    private NavMeshObstacle[] obstacles;
 
 
     // Heard a noise: walk there first, then carry on wandering
@@ -52,6 +54,7 @@ public class EnemyWander : MonoBehaviour
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponentInChildren<Animator>(); // Finds Animator on this or child mesh
         vision = GetComponent<EnemyVision>();
+        obstacles = FindObjectsByType<NavMeshObstacle>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         timer = waitTime;
         SetNewDestination();
     }
@@ -65,6 +68,21 @@ public class EnemyWander : MonoBehaviour
             float speed = agent.velocity.magnitude / agent.speed;
             animator.SetFloat("Speed", speed);
         }
+
+        // walking but going nowhere (held back by furniture / an obstacle): give up on this goal and pick another
+        if (!agent.pathPending && agent.hasPath && !agent.isStopped && agent.remainingDistance > agent.stoppingDistance + 0.15f && agent.velocity.sqrMagnitude < 0.01f)
+        {
+            stuckTime += Time.deltaTime;
+            if (stuckTime > 1.5f)
+            {
+                stuckTime = 0f;
+                hasNoise = false;
+                timer = 0f;
+                SetNewDestination();
+                return;
+            }
+        }
+        else stuckTime = 0f;
 
         if (hasNoise)
         {
@@ -88,13 +106,38 @@ public class EnemyWander : MonoBehaviour
 
     void SetNewDestination()
     {
-        Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
-        randomDirection += transform.position;
-
-        NavMeshHit hit;
-        if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, NavMesh.AllAreas))
+        // a few tries: skip spots inside furniture that has a nav obstacle but no hole in the navmesh (he could never reach them)
+        NavMeshHit hit = new NavMeshHit();
+        bool found = false;
+        for (int i = 0; i < 8; i++)
         {
-            agent.SetDestination(hit.position);
+            Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
+            randomDirection += transform.position;
+            if (!NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, NavMesh.AllAreas)) continue;
+            found = true;
+            if (!InsideObstacle(hit.position)) break;
         }
+        if (found) agent.SetDestination(hit.position);
+    }
+
+    bool InsideObstacle(Vector3 p)
+    {
+        if (obstacles == null) return false;
+        foreach (NavMeshObstacle o in obstacles)
+        {
+            if (o == null || o.carving || !o.enabled || !o.gameObject.activeInHierarchy) continue;
+            Vector3 local = o.transform.InverseTransformPoint(p) - o.center;
+            if (o.shape == NavMeshObstacleShape.Box)
+            {
+                Vector3 h = o.size * 0.5f; float m = 0.4f / Mathf.Max(0.01f, o.transform.lossyScale.x); // 0.4 m margin (his body width)
+                if (Mathf.Abs(local.x) < h.x + m && Mathf.Abs(local.z) < h.z + m) return true;
+            }
+            else
+            {
+                float r = o.radius + 0.4f / Mathf.Max(0.01f, o.transform.lossyScale.x);
+                if (local.x * local.x + local.z * local.z < r * r) return true;
+            }
+        }
+        return false;
     }
 }

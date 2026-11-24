@@ -82,6 +82,7 @@ public class HidingSpot : MonoBehaviour
         {
             if (occupant == null) TryEnter(humanInRange);
             else if (occupant == humanInRange) Exit(humanInRange);
+            else if (KnifeHolder.IsHolder(humanInRange)) HunterOpen(humanInRange, 1.2f); // golden knife: open it and stab whoever is inside
         }
 
         if (occupant != null && occupant.isHumanControlled && switchedCamera)
@@ -108,6 +109,7 @@ public class HidingSpot : MonoBehaviour
         HidePrompt.Mode mode;
         if (occupant == null) mode = HidePrompt.Mode.Hide;
         else if (occupant == humanInRange) mode = HidePrompt.Mode.ComeOut;
+        else if (KnifeHolder.IsHolder(humanInRange)) mode = HidePrompt.Mode.Stab;
         else mode = HidePrompt.Mode.Occupied;
 
         HidePrompt.Instance.Show(this, GetPromptPosition(), mode);
@@ -244,6 +246,31 @@ public class HidingSpot : MonoBehaviour
             switchedCamera = false;
         }
         if (fridge != null) fridge.PlayExit();
+    }
+
+    // The player holding the golden knife opens this spot; whoever is hiding inside is pulled out and stabbed.
+    bool openingByHunter;
+    public bool HunterOpen(Hider hunter, float duration)
+    {
+        if (hunter == null || hunter.IsCaught || occupant == null || occupant == hunter || openingByHunter) return false;
+        StartCoroutine(HunterOpenRoutine(hunter, duration));
+        return true;
+    }
+
+    System.Collections.IEnumerator HunterOpenRoutine(Hider hunter, float duration)
+    {
+        openingByHunter = true;
+        NotifyEnemyOpening(duration); // fridge doors swing open
+        yield return new WaitForSeconds(duration);
+        Hider victim = occupant;
+        if (victim != null && victim != hunter && !victim.IsCaught && hunter != null && !hunter.IsCaught)
+        {
+            Exit(victim);
+            KnifeHolder k = hunter.GetComponent<KnifeHolder>();
+            if (k != null) k.Swing();
+            victim.FreezeBy(hunter);
+        }
+        openingByHunter = false;
     }
 
     // Called by the enemy when he starts opening this spot.
