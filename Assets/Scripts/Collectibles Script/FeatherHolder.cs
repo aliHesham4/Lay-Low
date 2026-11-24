@@ -33,7 +33,7 @@ public class FeatherHolder : MonoBehaviour
     Canvas canvas;
     RectTransform canvasRect;
     Image cursorImage;
-    TMP_Text hint;
+    GameObject hint; // the paper hint card (centre-bottom) while aiming
 
     public bool HasFeather { get { return has; } }
     public bool IsAiming { get { return aiming; } }
@@ -138,7 +138,7 @@ public class FeatherHolder : MonoBehaviour
 
         cursorImage.sprite = icon;
         cursorImage.gameObject.SetActive(true);
-        hint.gameObject.SetActive(true);
+        hint.SetActive(true);
         MoveCursor(Mouse.current.position.ReadValue());
     }
 
@@ -149,7 +149,7 @@ public class FeatherHolder : MonoBehaviour
         Cursor.visible = cursorWasVisible;
         if (hovered != null) { hovered.SetTickleHighlight(false); hovered = null; }
         if (cursorImage != null) cursorImage.gameObject.SetActive(false);
-        if (hint != null) hint.gameObject.SetActive(false);
+        if (hint != null) hint.SetActive(false);
         // give the thrower back one frame later so the click that picked the player is not also a throw
         if (thrower != null) StartCoroutine(RestoreThrower());
     }
@@ -190,23 +190,6 @@ public class FeatherHolder : MonoBehaviour
         r.sizeDelta = new Vector2(cursorSize, cursorSize);
         g.SetActive(false);
 
-        GameObject t = new GameObject("FeatherHint", typeof(RectTransform));
-        t.transform.SetParent(canvas.transform, false);
-        TextMeshProUGUI tmp = t.AddComponent<TextMeshProUGUI>();
-        if (hud.nameText != null) tmp.font = hud.nameText.font;
-        tmp.fontSize = 30;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.raycastTarget = false;
-        tmp.enableWordWrapping = false;
-        tmp.overflowMode = TextOverflowModes.Overflow;
-        tmp.text = "Click a player's card to tickle them\n<size=70%><color=#CCCCCC>F / Esc / right-click to cancel</color></size>";
-        RectTransform tr = tmp.rectTransform;
-        tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0f);
-        tr.pivot = new Vector2(0.5f, 0f);
-        tr.anchoredPosition = new Vector2(0f, 60f);
-        tr.sizeDelta = new Vector2(900f, 90f);
-        hint = tmp;
-        t.SetActive(false);
+        hint = PaperUI.Hint(canvas.transform, "Click a player's card to tickle them", "F", "Esc");
     }
 }

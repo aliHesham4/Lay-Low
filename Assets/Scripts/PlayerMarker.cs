@@ -66,6 +66,17 @@ public class PlayerMarker : MonoBehaviour
         TintStoneMarker(outline.color);
     }
 
+// re-reads this player's colour (e.g. gold while holding the golden knife, back to normal after)
+    public void RefreshColor()
+    {
+        if (hider == null) hider = GetComponent<Hider>();
+        Color c = PlayerColors.For(hider);
+        if (outline != null) outline.SetColor(c);
+        if (spotOutline != null) spotOutline.SetColor(c);
+        TintStoneMarker(c);
+    }
+
+
     // the stone target marker (and its beam) in this player's colour
     void TintStoneMarker(Color c)
     {

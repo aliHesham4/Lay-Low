@@ -25,7 +25,7 @@ public class DoorLockHolder : MonoBehaviour
     Canvas canvas;
     RectTransform canvasRect;
     Image cursorImage;
-    TMP_Text hint;
+    GameObject hint; // the paper hint card (centre-bottom) while aiming
 
     public bool HasLock { get { return has; } }
     public bool IsAiming { get { return aiming; } }
@@ -119,7 +119,7 @@ public class DoorLockHolder : MonoBehaviour
         if (thrower != null) { throwerWasEnabled = thrower.enabled; thrower.enabled = false; }
         cursorImage.sprite = icon;
         cursorImage.gameObject.SetActive(true);
-        hint.gameObject.SetActive(true);
+        hint.SetActive(true);
         MoveCursor(Mouse.current.position.ReadValue());
         foreach (LockableDoorway d in LockableDoorway.All) if (d != null) d.SetHighlight(d.IsLocked ? 0 : 1, MyColor);
         hovered = null;
@@ -133,7 +133,7 @@ public class DoorLockHolder : MonoBehaviour
         foreach (LockableDoorway d in LockableDoorway.All) if (d != null) d.SetHighlight(0, MyColor);
         hovered = null;
         if (cursorImage != null) cursorImage.gameObject.SetActive(false);
-        if (hint != null) hint.gameObject.SetActive(false);
+        if (hint != null) hint.SetActive(false);
         if (thrower != null) StartCoroutine(RestoreThrower()); // so the click that locked is not also a throw
     }
 
@@ -170,22 +170,6 @@ public class DoorLockHolder : MonoBehaviour
         r.sizeDelta = new Vector2(cursorSize, cursorSize);
         g.SetActive(false);
 
-        GameObject t = new GameObject("DoorLockHint", typeof(RectTransform));
-        t.transform.SetParent(canvas.transform, false);
-        TextMeshProUGUI tmp = t.AddComponent<TextMeshProUGUI>();
-        if (hud.nameText != null) tmp.font = hud.nameText.font;
-        tmp.fontSize = 30;
-        tmp.alignment = TextAlignmentOptions.Center;
-        tmp.color = Color.white;
-        tmp.raycastTarget = false;
-        tmp.enableWordWrapping = false;
-        tmp.text = "Click a doorway to slam it shut\n<size=70%><color=#CCCCCC>E / Esc / right-click to cancel</color></size>";
-        RectTransform tr = tmp.rectTransform;
-        tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0f);
-        tr.pivot = new Vector2(0.5f, 0f);
-        tr.anchoredPosition = new Vector2(0f, 60f);
-        tr.sizeDelta = new Vector2(900f, 90f);
-        hint = tmp;
-        t.SetActive(false);
+        hint = PaperUI.Hint(canvas.transform, "Click a doorway to slam it shut", "E", "Esc");
     }
 }

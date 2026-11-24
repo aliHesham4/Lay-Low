@@ -76,13 +76,33 @@ public class HidingSpot : MonoBehaviour
     [Tooltip("Optional. Where the prompt floats. Defaults to just above the trigger box.")]
     public Transform promptAnchor;
 
+    // every hiding spot, so a key press is answered by one spot only (two spots can share the player)
+    static readonly System.Collections.Generic.List<HidingSpot> all = new System.Collections.Generic.List<HidingSpot>();
+    static int hHandledFrame = -1;
+    // the human knife holder can't hide while opening a spot, or for a moment after the kill
+    static float hunterBusyUntil = -1f;
+    float stabPromptAt = -9f; // last time this spot offered the knife holder 'to open and stab'
+
+    void OnEnable() { if (!all.Contains(this)) all.Add(this); }
+
     void Update()
     {
-        if (humanInRange != null && Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame)
+        if (humanInRange != null && Keyboard.current != null && Keyboard.current.hKey.wasPressedThisFrame && hHandledFrame != Time.frameCount)
         {
-            if (occupant == null) TryEnter(humanInRange);
-            else if (occupant == humanInRange) Exit(humanInRange);
-            else if (KnifeHolder.IsHolder(humanInRange)) HunterOpen(humanInRange, 1.2f); // golden knife: open it and stab whoever is inside
+            bool hunter = KnifeHolder.IsHolder(humanInRange);
+            if (occupant == null)
+            {
+                // the knife holder never ends up hidden by mistake: no hiding while busy opening a spot,
+                // and an occupied spot next to this one is opened instead
+                // (also when the one inside slipped out just as he pressed: the prompt still said 'to open and stab')
+                if (!(hunter && (Time.time < hunterBusyUntil || OccupiedSpotFor(humanInRange) != null || Time.time - stabPromptAt < 0.6f)))
+                {
+                    hHandledFrame = Time.frameCount;
+                    TryEnter(humanInRange);
+                }
+            }
+            else if (occupant == humanInRange) { hHandledFrame = Time.frameCount; Exit(humanInRange); }
+            else if (hunter) { hHandledFrame = Time.frameCount; HunterOpen(humanInRange, 1.2f); } // golden knife: open it and stab whoever is inside
         }
 
         if (occupant != null && occupant.isHumanControlled && switchedCamera)
@@ -91,15 +111,26 @@ public class HidingSpot : MonoBehaviour
         UpdatePrompt();
     }
 
+    // another spot the player is standing at, with someone (else) hiding in it
+    HidingSpot OccupiedSpotFor(Hider h)
+    {
+        foreach (HidingSpot s in all)
+            if (s != null && s != this && s.humanInRange == h && s.occupant != null && s.occupant != h && !s.openingByHunter) return s;
+        return null;
+    }
+
     void OnDisable()
     {
+        all.Remove(this);
         HidePrompt.Hide(this);
     }
 
     // Shows "Press [H] to hide", "Press [H] to come out" or "A player is hiding here"
     void UpdatePrompt()
     {
-        bool show = humanInRange != null && !humanInRange.IsCaught && Time.timeScale > 0f;
+        bool show = humanInRange != null && !humanInRange.IsCaught && Time.timeScale > 0f && !openingByHunter;
+        // the knife holder gets no 'to hide' prompt while opening a spot or just after a kill
+        if (show && occupant == null && KnifeHolder.IsHolder(humanInRange) && (Time.time < hunterBusyUntil || OccupiedSpotFor(humanInRange) != null)) show = false;
         if (!show)
         {
             HidePrompt.Hide(this);
@@ -109,7 +140,7 @@ public class HidingSpot : MonoBehaviour
         HidePrompt.Mode mode;
         if (occupant == null) mode = HidePrompt.Mode.Hide;
         else if (occupant == humanInRange) mode = HidePrompt.Mode.ComeOut;
-        else if (KnifeHolder.IsHolder(humanInRange)) mode = HidePrompt.Mode.Stab;
+        else if (KnifeHolder.IsHolder(humanInRange)) { mode = HidePrompt.Mode.Stab; stabPromptAt = Time.time; }
         else mode = HidePrompt.Mode.Occupied;
 
         HidePrompt.Instance.Show(this, GetPromptPosition(), mode);
@@ -253,6 +284,7 @@ public class HidingSpot : MonoBehaviour
     public bool HunterOpen(Hider hunter, float duration)
     {
         if (hunter == null || hunter.IsCaught || occupant == null || occupant == hunter || openingByHunter) return false;
+        if (hunter.isHumanControlled) hunterBusyUntil = Time.time + duration + 1.2f;
         StartCoroutine(HunterOpenRoutine(hunter, duration));
         return true;
     }
@@ -265,10 +297,10 @@ public class HidingSpot : MonoBehaviour
         Hider victim = occupant;
         if (victim != null && victim != hunter && !victim.IsCaught && hunter != null && !hunter.IsCaught)
         {
-            Exit(victim);
+            Exit(victim); // pulled out of the spot...
             KnifeHolder k = hunter.GetComponent<KnifeHolder>();
-            if (k != null) k.Swing();
-            victim.FreezeBy(hunter);
+            if (k != null) k.StabPulledOut(victim); // ...then stabbed, with the swing
+            else victim.FreezeBy(hunter);
         }
         openingByHunter = false;
     }

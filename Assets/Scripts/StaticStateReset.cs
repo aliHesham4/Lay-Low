@@ -16,6 +16,7 @@ static class StaticStateReset
         Set("RoundManager", "<Instance>k__BackingField", null);
         Set("RoundManager", "currentRound", 1);
         Clear("RoundManager", "scores");
+        Clear("RoundManager", "history");
         Set("BlackoutRound", "instance", null);
         Set("BlackoutRound", "powerOff", false);
         Set("BlackoutRound", "human", null);
@@ -37,6 +38,11 @@ static class StaticStateReset
         Clear("EnvironmentalHazard", "all");
         Clear("EnvironmentalHazard", "peaks");
         Set("HazardAlertUI", "instance", null);
+        Set("PaperToast", "instance", null);
+        Set("PaperToast", "Hold", 2.5f);
+        Clear("HidingSpot", "all");
+        Set("HidingSpot", "hHandledFrame", -1);
+        Set("HidingSpot", "hunterBusyUntil", -1f);
         // Cartoon FX / stylised water packages
         Clear("CartoonFX.CFXR_Effect+CameraShake", "s_CameraShakes");
         Set("CartoonFX.CFXR_Effect", "GlobalStartFrameOffset", 0);

@@ -6,7 +6,8 @@ using UnityEngine.AI;
 // One room that can 'malfunction' (environmental state). When it starts:
 //   1. an alert pops up for everyone (bottom-left) and counts down warningSeconds,
 //   2. then the effect fills the room, every doorway into it slams shut for the rest of the round,
-//      and anyone still inside (players or AI) dies. The killer is pushed out; nobody can enter after.
+//      and anyone still inside (players or AI) dies. If the killer is in the room when the countdown ends, the alarm
+//      keeps going and the room only seals once he has walked out (no teleporting him). Nobody can enter after.
 // EnvironmentalStateManager decides when (round 2) and which rooms.
 public class EnvironmentalHazard : MonoBehaviour
 {
@@ -587,6 +588,8 @@ public class EnvironmentalHazard : MonoBehaviour
         bool on = true;
         while (Time.time < end)
         {
+            // the killer wandered in: hold the countdown just short of the end (alarm keeps going) until he walks out
+            if (!igniteStarted && KillerInside() && end - Time.time < lead + 0.3f) end = Time.time + lead + 0.3f;
             if (!igniteStarted && igniteSound != null && Time.time >= end - lead) { igniteStarted = true; PlayIgnite(); }
             if (lightWarning == LightWarning.None)
             {
@@ -607,6 +610,8 @@ public class EnvironmentalHazard : MonoBehaviour
                 yield return new WaitForSeconds(Random.Range(0.03f, Mathf.Lerp(0.15f, 0.06f, k)));
             }
         }
+        // he stepped back in during the very last moment: wait (alarm still on) until he is out again
+        while (KillerInside()) yield return null;
         if (!igniteStarted && igniteSound != null) PlayIgnite();
         if (alarm != null) StartCoroutine(FadeOutAndStop(alarm, 0.25f));
         if (warnFx != null)
@@ -693,14 +698,7 @@ public class EnvironmentalHazard : MonoBehaviour
         BlockNavArea();
         if (lightningStrikes) StartCoroutine(AmbientStrikes());
 
-        // the killer is not affected, he just gets pushed out of the room
-        foreach (EnemyVision k in FindObjectsByType<EnemyVision>(FindObjectsSortMode.None))
-        {
-            if (k == null || !Contains(k.transform.position)) continue;
-            Vector3 exit;
-            NavMeshAgent a = k.GetComponent<NavMeshAgent>();
-            if (a != null && a.enabled && ExitPoint(k.transform.position, out exit)) a.Warp(exit);
-        }
+        // (the killer is never inside here: Run() waits for him to leave before sealing)
 
         HazardAlertUI.ShowSealed(alertTitle, sealedMessage);
     }
@@ -1096,5 +1094,14 @@ public class EnvironmentalHazard : MonoBehaviour
         Gizmos.color = new Color(0.4f, 1f, 0.2f, State == Phase.Idle ? 0.15f : 0.4f);
         Gizmos.matrix = area.transform.localToWorldMatrix;
         Gizmos.DrawCube(area.center, area.size);
+    }
+
+
+// is the killer standing in this room right now?
+    bool KillerInside()
+    {
+        foreach (EnemyVision k in FindObjectsByType<EnemyVision>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            if (k != null && k.gameObject.activeInHierarchy && Contains(k.transform.position)) return true;
+        return false;
     }
 }

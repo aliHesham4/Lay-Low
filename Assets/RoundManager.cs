@@ -29,12 +29,26 @@ public class RoundManager : MonoBehaviour
     [Tooltip("Seconds the house keeps moving after the round ends (so a death animation can finish) before it freezes.")]
     public float freezeAfterEnd = 2.5f;
 
+    [Header("Sounds")]
+    [Tooltip("Plays when the match-over scoreboard appears.")]
+    public AudioClip winnerSound;
+    [Range(0f, 1f)] public float winnerVolume = 0.8f;
+
+    [Header("Testing")]
+    [Tooltip("Press Play and the match starts at this round (1 = normal game). Set it back to 1 when you're done testing.")]
+    [Range(1, 4)] public int startAtRound = 1;
+
     // ---- survives the scene reload ----
     static int currentRound = 1;
     static readonly Dictionary<string, int> scores = new Dictionary<string, int>();
+    // what happened to each player in each round so far: s = survived, c = caught, k = stabbed (for the final scoreboard)
+    static readonly Dictionary<string, string> history = new Dictionary<string, string>();
+    static bool matchStarted; // false until the first round of a match has loaded
+    bool introDone;   // false while the round intro (blind + round card) is playing
+    bool loadingNext; // the blind is closing / the next round is loading
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetMatch() { currentRound = 1; scores.Clear(); }
+    static void ResetMatch() { currentRound = 1; scores.Clear(); history.Clear(); matchStarted = false; }
 
     public static int CurrentRound { get { return currentRound; } }
     public float TimeLeft { get { return timeLeft; } }
@@ -44,6 +58,8 @@ public class RoundManager : MonoBehaviour
     bool roundOver;
     bool matchOver;
     TextMeshProUGUI timerText, bannerText, toastText;
+    PaperClock clock;
+    float RoundLength { get { return currentRound == 1 ? firstRoundSeconds : otherRoundSeconds; } }
     Image bannerBack;
     float toastUntil;
     float freezeAt = float.MaxValue, nextAt = float.MaxValue;
@@ -52,6 +68,12 @@ public class RoundManager : MonoBehaviour
     {
         Instance = this;
         Time.timeScale = 1f;
+        // testing: jump straight to a later round when a new match begins
+        if (!matchStarted)
+        {
+            matchStarted = true;
+            if (startAtRound > 1) currentRound = Mathf.Clamp(startAtRound, 1, totalRounds);
+        }
     }
 
     void Start()
@@ -59,6 +81,7 @@ public class RoundManager : MonoBehaviour
         if (hiders == null || hiders.Length == 0) hiders = FindObjectsByType<Hider>(FindObjectsSortMode.None);
         timeLeft = currentRound == 1 ? firstRoundSeconds : otherRoundSeconds;
         BuildUI();
+        if (clock != null) clock.Set(timeLeft, RoundLength, false); // full clock while the round intro plays
 
         // put the scores from earlier rounds back on the HUD cards
         foreach (Hider h in hiders)
@@ -69,7 +92,18 @@ public class RoundManager : MonoBehaviour
             if (hud != null) hud.SetScore(s);
         }
 
-        StartCoroutine(Intro());
+        if (RoundIntro.Instance != null)
+        {
+            // the house waits, frozen, behind the shut blind until this round is loaded and ready,
+            // then the blind opens, the round card plays, and only then does the round begin
+            Time.timeScale = 0f;
+            RoundIntro.Instance.ShowRound(currentRound, () => { introDone = true; Time.timeScale = 1f; });
+        }
+        else
+        {
+            introDone = true;
+            StartCoroutine(Intro());
+        }
     }
 
     IEnumerator Intro()
@@ -88,15 +122,12 @@ public class RoundManager : MonoBehaviour
         }
         if (toastText != null && toastText.gameObject.activeSelf && Time.unscaledTime > toastUntil) toastText.gameObject.SetActive(false);
         if (roundOver) { UpdateResults(); return; }
+        if (!introDone) return; // no clock while the round intro plays
 
         timeLeft -= Time.deltaTime;
         if (timeLeft <= 0f) { timeLeft = 0f; EndRound("Time's up!"); }
 
-        if (timerText != null)
-        {
-            timerText.text = "Round " + currentRound + "/" + totalRounds + "   " + FormatTime(timeLeft);
-            timerText.color = timeLeft <= 10f ? new Color(1f, 0.35f, 0.3f) : Color.white;
-        }
+        if (clock != null) clock.Set(timeLeft, RoundLength, BlackoutRound.Active); // the paper wall clock, top-right
         if (toastText != null && toastText.gameObject.activeSelf && Time.unscaledTime > toastUntil) toastText.gameObject.SetActive(false);
     }
 
@@ -116,34 +147,55 @@ public class RoundManager : MonoBehaviour
             if (!h.IsCaught) { free++; survivor = h; }
         }
         if (free == 0) EndRound("Everyone was caught!");
-        else if (free == 1 && players > 1) EndRound(survivor.GetComponent<KnifeHolder>() != null ? survivor.displayName + " is coming home alive!" : survivor.displayName + " is the last one standing!");
+        else if (free == 1 && players > 1) EndRound("Last one standing!", survivor);
     }
 
-    void EndRound(string reason)
+    void EndRound(string reason, Hider lastStanding = null)
     {
         if (roundOver) return;
         roundOver = true;
 
-        string lines = "";
+        // scores, each player's result this round, and the scoreboard rows
+        List<ScoreLine> lines = new List<ScoreLine>();
         foreach (Hider h in hiders)
         {
             if (h == null) continue;
             int s; scores.TryGetValue(h.displayName, out s);
-            if (!h.IsCaught)
-            {
-                s += pointsForSurviving;
-                lines += "\n<color=#7CFF7C>" + h.displayName + " survived  +" + pointsForSurviving + "</color>";
-            }
-            else lines += "\n<color=#FF8080>" + h.displayName + " was caught</color>";
+            int gained = h.IsCaught ? 0 : pointsForSurviving;
+            s += gained;
             scores[h.displayName] = s;
+            string past; history.TryGetValue(h.displayName, out past);
+            history[h.displayName] = (past ?? "") + (!h.IsCaught ? "s" : h.KilledBy != null ? "k" : "c");
             PlayerHUD hud = h.GetComponent<PlayerHUD>();
             if (hud != null) hud.SetScore(s);
+            lines.Add(Line(h, gained, s));
         }
 
         if (timerText != null) timerText.text = "Round " + currentRound + "/" + totalRounds + "   0:00";
-        ShowBanner("<size=120%>" + reason + "</size>\n<size=60%>Round " + currentRound + " over" + lines + "</size>");
+        if (clock != null) clock.Set(0f, RoundLength, BlackoutRound.Active);
+        if (lastStanding != null) PaperScoreboard.ShowRound(currentRound, totalRounds, reason, true, lastStanding.displayName, lines);
+        else PaperScoreboard.ShowRound(currentRound, totalRounds, reason, false, null, lines);
         freezeAt = Time.unscaledTime + freezeAfterEnd;
         nextAt = Time.unscaledTime + resultsSeconds;
+    }
+
+    // one player's row on the scoreboard
+    ScoreLine Line(Hider h, int gained, int total)
+    {
+        PlayerHUD hud = h.GetComponent<PlayerHUD>();
+        ScoreLine l = new ScoreLine();
+        l.name = h.displayName;
+        l.face = hud != null ? hud.characterFaceSprite : null;
+        l.portrait = hud != null ? hud.portraitSprite : null;
+        l.colour = hud != null ? hud.CardColour : Color.white;
+        if (!h.IsCaught) l.result = h.GetComponent<KnifeHolder>() != null ? ScoreLine.Result.SurvivedWithKnife : ScoreLine.Result.Survived;
+        else if (h.KilledBy != null) { l.result = ScoreLine.Result.Stabbed; l.stabbedBy = h.KilledBy.displayName; }
+        else l.result = ScoreLine.Result.Caught;
+        l.gained = gained;
+        l.total = total;
+        string past; history.TryGetValue(h.displayName, out past);
+        l.history = past ?? "";
+        return l;
     }
 
     // after the round ends (real time, so it works while the game is frozen)
@@ -155,8 +207,7 @@ public class RoundManager : MonoBehaviour
         if (currentRound >= totalRounds) { Time.timeScale = 0f; ShowFinal(); return; }
 
         currentRound++;
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        LoadNextBehindBlind();
         nextAt = float.MaxValue;
     }
 
@@ -164,26 +215,56 @@ public class RoundManager : MonoBehaviour
     {
         matchOver = true;
         if (toastText != null) toastText.gameObject.SetActive(false);
-        int best = int.MinValue; List<string> winners = new List<string>();
-        string table = "";
+        List<ScoreLine> standings = new List<ScoreLine>();
         foreach (Hider h in hiders)
         {
             if (h == null) continue;
             int s; scores.TryGetValue(h.displayName, out s);
-            table += "\n" + h.displayName + ":  " + s;
-            if (s > best) { best = s; winners.Clear(); winners.Add(h.displayName); }
-            else if (s == best) winners.Add(h.displayName);
+            standings.Add(Line(h, 0, s));
         }
-        string head = winners.Count == 1 ? winners[0] + " wins!" : "It's a tie!  " + string.Join(" & ", winners.ToArray());
-        ShowBanner("<size=130%>Match over</size>\n" + head + "<size=60%>" + table + "\n\n<color=#CCCCCC>Press R to play again</color></size>");
+        // highest first (players with the same score keep their card order)
+        List<ScoreLine> sorted = new List<ScoreLine>();
+        foreach (ScoreLine l in standings)
+        {
+            int at = sorted.Count;
+            for (int i = 0; i < sorted.Count; i++) if (l.total > sorted[i].total) { at = i; break; }
+            sorted.Insert(at, l);
+        }
+        List<ScoreLine> winners = new List<ScoreLine>();
+        foreach (ScoreLine l in sorted) if (l.total == sorted[0].total) winners.Add(l);
+        PaperScoreboard.ShowFinal(sorted, winners, totalRounds);
+        if (winnerSound != null)
+        {
+            // the house is frozen (timeScale 0) but audio still plays; 2D so it sounds the same wherever the camera is
+            AudioSource a = gameObject.AddComponent<AudioSource>();
+            a.clip = winnerSound; a.volume = winnerVolume; a.spatialBlend = 0f; a.ignoreListenerPause = true;
+            a.Play();
+        }
     }
 
     void NewMatch()
     {
         ResetMatch();
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        LoadNextBehindBlind();
     }
+
+// After the scoreboard: the hand pulls the blind shut, and only then does the next round load behind it.
+    // The new scene's RoundManager opens the blind once it is up and running.
+    void LoadNextBehindBlind()
+    {
+        if (loadingNext) return;
+        loadingNext = true;
+        nextAt = float.MaxValue;
+        int scene = SceneManager.GetActiveScene().buildIndex;
+        if (RoundIntro.Instance == null)
+        {
+            Time.timeScale = 1f;
+            SceneManager.LoadScene(scene);
+            return;
+        }
+        RoundIntro.Instance.CloseShutter(() => SceneManager.LoadSceneAsync(scene));
+    }
+
 
     static string FormatTime(float t)
     {
@@ -195,10 +276,8 @@ public class RoundManager : MonoBehaviour
 
     public void Toast(string msg)
     {
-        if (toastText == null) return;
-        toastText.text = msg;
-        toastText.gameObject.SetActive(true);
-        toastUntil = Time.unscaledTime + 2.5f;
+        // a paper strip pinned under the HUD row; golden-knife news gets the gold strip
+        PaperToast.Show(msg, msg.ToLowerInvariant().Contains("golden knife"));
     }
 
     void ShowBanner(string msg)
@@ -236,6 +315,8 @@ public class RoundManager : MonoBehaviour
 
         timerText = MakeText(c.transform, "Timer", font, 40, new Vector2(0.5f, 1f), new Vector2(0f, -158f), new Vector2(600, 60)); // below the player cards
         timerText.fontStyle = FontStyles.Bold;
+        timerText.gameObject.SetActive(false); // replaced by the paper wall clock
+        clock = PaperClock.Create();
 
         GameObject back = new GameObject("BannerBack", typeof(RectTransform), typeof(Image));
         back.transform.SetParent(c.transform, false);

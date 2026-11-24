@@ -159,6 +159,7 @@ public class ItemSpawner : MonoBehaviour
         foreach (FeatherCollectible c in FindObjectsByType<FeatherCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
         foreach (DoorLockCollectible c in FindObjectsByType<DoorLockCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
         foreach (IceGunCollectible c in FindObjectsByType<IceGunCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position);
+        foreach (GoldenKnifeCollectible c in FindObjectsByType<GoldenKnifeCollectible>(FindObjectsSortMode.None)) items.Add(c.transform.position); // never drop an item on the golden knife
         Hider[] players = FindObjectsByType<Hider>(FindObjectsSortMode.None);
 
         var free = new System.Collections.Generic.List<Transform>();

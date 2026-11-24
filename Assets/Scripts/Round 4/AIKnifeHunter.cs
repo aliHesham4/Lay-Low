@@ -9,8 +9,8 @@ using UnityEngine.AI;
 [RequireComponent(typeof(AIHider))]
 public class AIKnifeHunter : MonoBehaviour
 {
-    public float chaseSpeed = 2.4f;
-    public float walkSpeed = 1.5f;
+    public float chaseSpeed = 2.1f; // same as a normal AI hider running (AIHider.fleeSpeed)
+    public float walkSpeed = 2.0f; // same as a normal AI hider walking (AIHider.wanderSpeed)
     public float sightDistance = 9f;
     public float stabDistance = 1.2f;
     public float openSeconds = 1.2f;

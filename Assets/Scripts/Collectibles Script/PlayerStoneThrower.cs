@@ -44,16 +44,12 @@ public class PlayerStoneThrower : MonoBehaviour
 
     void Update()
     {
-        if (!hasStone) return;
+        if (!hasStone) { if (isTargeting) StopTargeting(); return; }
 
         // No throwing from inside a hiding spot
         if (hiderRef != null && hiderRef.IsHidden)
         {
-            if (isTargeting)
-            {
-                isTargeting = false;
-                if (targetIndicator != null) targetIndicator.SetActive(false);
-            }
+            if (isTargeting) StopTargeting();
             return;
         }
 
@@ -62,6 +58,8 @@ public class PlayerStoneThrower : MonoBehaviour
         {
             isTargeting = true;
             if (targetIndicator != null) targetIndicator.SetActive(true);
+            ShowHint(true);
+            return;
         }
 
         if (isTargeting)
@@ -71,18 +69,39 @@ public class PlayerStoneThrower : MonoBehaviour
             // Left click to confirm the throw
             if (Mouse.current.leftButton.wasPressedThisFrame)
             {
-                isTargeting = false;
-                if (targetIndicator != null) targetIndicator.SetActive(false);
+                StopTargeting();
                 StartCoroutine(ThrowStoneRoutine(targetIndicator.transform.position));
             }
-
-            // Right click to cancel targeting
-            if (Mouse.current.rightButton.wasPressedThisFrame)
+            // T again, Esc or right click to cancel (the same keys as the other items)
+            else if (Mouse.current.rightButton.wasPressedThisFrame || Keyboard.current.escapeKey.wasPressedThisFrame || Keyboard.current.tKey.wasPressedThisFrame)
             {
-                isTargeting = false;
-                if (targetIndicator != null) targetIndicator.SetActive(false);
+                StopTargeting();
             }
         }
+    }
+
+    void StopTargeting()
+    {
+        isTargeting = false;
+        if (targetIndicator != null) targetIndicator.SetActive(false);
+        ShowHint(false);
+    }
+
+    // the paper hint card (centre-bottom) while aiming, like the feather, door lock and ice gun
+    GameObject hint;
+    void ShowHint(bool on)
+    {
+        if (hint == null)
+        {
+            if (!on || playerHUD == null || playerHUD.bagIcon == null) return;
+            hint = PaperUI.Hint(playerHUD.bagIcon.canvas.rootCanvas.transform, "Click the floor to throw the rock", "T", "Esc");
+        }
+        hint.SetActive(on);
+    }
+
+    void OnDisable()
+    {
+        if (isTargeting) StopTargeting();
     }
 
     void MoveIndicatorWithMouse()

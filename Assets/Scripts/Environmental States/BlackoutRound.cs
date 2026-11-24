@@ -77,6 +77,8 @@ public class BlackoutRound : MonoBehaviour
     [Range(0f, 1f)] public float roarVolume = 0.5f;
     [Tooltip("Seconds between evil sounds (min, max).")]
     public Vector2 roarInterval = new Vector2(20f, 40f);
+    [Tooltip("Seconds the clown laugh takes to fade in.")] public float laughFadeIn = 0.15f;
+    [Tooltip("Seconds the clown laugh takes to fade out at the end (at most 40% of a short clip).")] public float laughFadeOut = 0.9f;
     public float roarHearDistance = 30f;
 
     [Header("Terror: the final hunt")]
@@ -225,7 +227,7 @@ public class BlackoutRound : MonoBehaviour
         oldMode = RenderSettings.ambientMode; oldAmbient = RenderSettings.ambientLight; oldReflections = RenderSettings.reflectionIntensity;
         ambientChanged = true;
 
-        HazardAlertUI.ShowSealed(alertTitle, alertMessage);
+        HazardAlertUI.ShowDanger(alertTitle, alertMessage);
         if (powerDownSound != null) AudioSource.PlayClipAtPoint(powerDownSound, Camera.main != null ? Camera.main.transform.position : transform.position, powerDownVolume);
         StartCoroutine(FadeOut());
     }
@@ -356,7 +358,7 @@ public class BlackoutRound : MonoBehaviour
     void StartHunt()
     {
         hunting = true;
-        HazardAlertUI.ShowSealed(huntTitle, huntMessage);
+        HazardAlertUI.ShowDanger(huntTitle, huntMessage);
         if (killer != null) killer.patrolSpeed += huntSpeedBonus;
         Roar();
         if (huntDrone != null)
@@ -390,6 +392,12 @@ public class BlackoutRound : MonoBehaviour
         AudioSource s = g.AddComponent<AudioSource>();
         s.clip = clip; s.volume = roarVolume; s.spatialBlend = 1f;
         s.rolloffMode = AudioRolloffMode.Linear; s.minDistance = 3f; s.maxDistance = roarHearDistance;
+        // the laugh clips end abruptly: ease the laugh in and let it die away instead of cutting off
+        FadeInOutSound fade = g.AddComponent<FadeInOutSound>();
+        fade.volume = roarVolume;
+        fade.fadeIn = laughFadeIn;
+        fade.fadeOut = laughFadeOut;
+        s.volume = 0f;
         s.Play();
         Destroy(g, clip.length + 0.2f);
         LastFlickerPos = killer.transform.position;
@@ -505,4 +513,28 @@ public class BlackoutRound : MonoBehaviour
     }
 
     static float Flat(Vector3 a, Vector3 b) { a.y = 0f; b.y = 0f; return Vector3.Distance(a, b); }
+}
+
+// Fades an AudioSource in at the start and out towards the end of its clip, following where the clip
+// actually is (so it stays in step even if the game is paused or slowed).
+public class FadeInOutSound : MonoBehaviour
+{
+    public float volume = 1f;
+    public float fadeIn = 0.15f;
+    public float fadeOut = 0.9f;
+    AudioSource src;
+
+    void Awake() { src = GetComponent<AudioSource>(); }
+
+    void Update()
+    {
+        if (src == null || src.clip == null) return;
+        float len = src.clip.length;
+        float t = src.time;
+        float outLen = Mathf.Min(fadeOut, len * 0.4f);
+        float inK = fadeIn > 0f ? Mathf.Clamp01(t / fadeIn) : 1f;
+        float outK = outLen > 0f ? Mathf.Clamp01((len - t) / outLen) : 1f;
+        if (!src.isPlaying && t <= 0f) outK = 0f; // finished
+        src.volume = volume * inK * outK * outK; // squared: the tail dies away smoothly
+    }
 }

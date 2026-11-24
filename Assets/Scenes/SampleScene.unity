@@ -337,11 +337,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentalHazard
   roomName: Terraces
   alertTitle: THUNDERSTORM
-  alertMessage: 'A thunderstorm is about to hit both terraces.
-
-    Get inside and
-    stay off the terraces!'
-  sealedMessage: Lightning is striking the terraces. Stay inside!
+  alertMessage: A storm is about to hit the terraces. Get inside!
+  sealedMessage: Lightning is hitting the terraces.
   warningSeconds: 5
   area: {fileID: 1001933928}
   extraAreas:
@@ -5200,6 +5197,9 @@ MonoBehaviour:
   resultsSeconds: 5
   introSeconds: 2.5
   freezeAfterEnd: 2.5
+  winnerSound: {fileID: 8300000, guid: de2b8456bbad8054e8a353453c0d5c94, type: 3}
+  winnerVolume: 0.8
+  startAtRound: 1
 --- !u!4 &153183273
 Transform:
   m_ObjectHideFlags: 0
@@ -16554,7 +16554,7 @@ MonoBehaviour:
   powerCutDelay: 3
   fadeOutTime: 1
   alertTitle: POWER OUTAGE
-  alertMessage: 'The power is out. Watch the lights: they flicker when he walks past.'
+  alertMessage: The power is out. The lights flicker when he walks past.
   powerDownSound: {fileID: 0}
   powerDownVolume: 0.7
   moonlight: {r: 0.05, g: 0.06, b: 0.1, a: 1}
@@ -16595,6 +16595,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: f90a983205a6af64f9d63b449c56e95d, type: 3}
   roarVolume: 0.5
   roarInterval: {x: 20, y: 40}
+  laughFadeIn: 0.15
+  laughFadeOut: 0.9
   roarHearDistance: 30
   huntSeconds: 30
   huntTitle: HE'S HUNTING
@@ -16719,6 +16721,86 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 281327074}
   m_SourcePrefab: {fileID: 100100000, guid: fb14ecd273a0bd745b2e323639fd4399, type: 3}
+--- !u!1 &474561430
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 474561432}
+  - component: {fileID: 474561431}
+  m_Layer: 0
+  m_Name: Round Intro
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &474561431
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 474561430}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad79cf5cd51904e4cbdd9f8aceacd5ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoundIntro
+  vignette: {fileID: 21300000, guid: 976716436b3713445aa81e81001f2d63, type: 3}
+  titleBase: {fileID: 21300000, guid: f7190bcf43fc840458a044df97fd856a, type: 3}
+  number1: {fileID: 21300000, guid: 60fb442381afbcc4fb952e7012ac622f, type: 3}
+  number2: {fileID: 21300000, guid: 55e380b437ac59a41aa8866941ac712d, type: 3}
+  number3: {fileID: 21300000, guid: aab659b93add9fa4e8614f88def9f577, type: 3}
+  number4: {fileID: 21300000, guid: 6ea5d3987afd4ed4b8b55457d99624a1, type: 3}
+  shutterSlats: {fileID: 21300000, guid: df213ca1eae37fe47889c5e7edaa2111, type: 3}
+  shutterRail: {fileID: 21300000, guid: 2aecaa311dd608944a49d31c7c9f5c5b, type: 3}
+  shutterCord: {fileID: 21300000, guid: 15d7e0563c3d7a14b95c6f56981fe41f, type: 3}
+  hand: {fileID: 21300000, guid: 140ab847c6514cb44b5c8a8ee363493e, type: 3}
+  rollerBox: {fileID: 21300000, guid: 3b055121c78ecfc4d9f9931b32037ed8, type: 3}
+  stamp: {fileID: 21300000, guid: 775fade906b24554b8da4eab6263a339, type: 3}
+  stampBell: {fileID: 21300000, guid: 82866bb51d89e6b43b4171b7a3135fe8, type: 3}
+  tape1: {fileID: 21300000, guid: 06ebfbe06611fe94888004c4cccec24b, type: 3}
+  tape2: {fileID: 21300000, guid: e8943c4acc3486a45a8f26e1dbf37410, type: 3}
+  banner: {fileID: 21300000, guid: 1eb7306eafb262a429a4ced043d560ae, type: 3}
+  bulbCord: {fileID: 21300000, guid: af7abbe97a4c7d3408171f6c991152f7, type: 3}
+  bulbGlow: {fileID: 21300000, guid: 00fc26c9083572c4ea3f908da7fe5d8a, type: 3}
+  bulbGlass: {fileID: 21300000, guid: 73b4bb5336998a0408138dc01470ed47, type: 3}
+  neonRound: {fileID: 21300000, guid: ba12c943749c43e45a51774f9c20158d, type: 3}
+  neon3: {fileID: 21300000, guid: c33985abeb6bdc84ba4e7b7d2d2e93c0, type: 3}
+  neonBanner: {fileID: 21300000, guid: 67b336bcd6f9e9841881fb53297d0b81, type: 3}
+  tombstone: {fileID: 21300000, guid: 8f3c0e940efb8a846855450ce94a7560, type: 3}
+  minClosedSeconds: 1
+  sortingOrder: 500
+  shutterSlam: {fileID: 8300000, guid: 2ab63312424673b448540d22fc8f05db, type: 3}
+  shutterOpen: {fileID: 8300000, guid: fd3565f7d5310094b857912804673645, type: 3}
+  popSound: {fileID: 0}
+  stampSound: {fileID: 8300000, guid: cf824b881e35f984facbff331420e331, type: 3}
+  doorbellSound: {fileID: 8300000, guid: 20480365939cc7f4c8e7b6d2691862a8, type: 3}
+  tapeSound: {fileID: 8300000, guid: 3d537a082692b364880c6b04812baf5b, type: 3}
+  creakSound: {fileID: 0}
+  flickerSound: {fileID: 8300000, guid: 94a49951a73eed94bb309961eb6f20c5, type: 3}
+  lightsOutSound: {fileID: 8300000, guid: fea47549ae09a864ba694bb397f97b88, type: 3}
+  rumbleSound: {fileID: 8300000, guid: 24bde50781c6cfb4b914cac80f55e85c, type: 3}
+  volume: 0.6
+--- !u!4 &474561432
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 474561430}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &475009135
 GameObject:
   m_ObjectHideFlags: 0
@@ -18855,11 +18937,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentalHazard
   roomName: Fireplace
   alertTitle: FIREPLACE BLAZE
-  alertMessage: 'Thick smoke is pouring out of the fireplace and it''s about to flare
-    up.
-
-    Get away from the fireplace!'
-  sealedMessage: The fireplace area is ablaze and blocked off by cones.
+  alertMessage: Smoke is pouring out of the fireplace. Get away from it!
+  sealedMessage: The fireplace is blocked off.
   warningSeconds: 5
   area: {fileID: 567667334}
   extraAreas: []
@@ -37319,6 +37398,7 @@ MonoBehaviour:
   maxItems: 3
   playerName: Player 1
   characterFaceSprite: {fileID: -4848254525670697682, guid: 2e6be19280cdd464ebe7db6d4a28df20, type: 3}
+  portraitSprite: {fileID: 21300000, guid: de3300a5f38f3484cb85256e666a7ad7, type: 3}
   stoneSprite: {fileID: 21300000, guid: 631ee0dde77a8f942beb601df1ab2a6e, type: 3}
   score: 0
   goldScore: 0
@@ -37516,7 +37596,7 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 1, g: 0.55, b: 0.22, a: 1}
-  m_Intensity: 1.3518313
+  m_Intensity: 1.1923716
   m_Range: 3.5
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -47812,11 +47892,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentalHazard
   roomName: Storage Room
   alertTitle: ELECTRICAL OVERLOAD
-  alertMessage: 'The storage room lamp is overheating and sparking.
-
-    Get out
-    before it blows!'
-  sealedMessage: The storage room is burnt out and sealed.
+  alertMessage: The storage room lamp is sparking. Get out before it blows!
+  sealedMessage: The storage room burnt out.
   warningSeconds: 5
   area: {fileID: 1534110830}
   extraAreas: []
@@ -48321,23 +48398,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FinalHuntRound
   activeRound: 4
-  huntSeconds: 60
+  huntSeconds: 90
   dropDelay: 4
-  title: ONLY ONE PERSON IS COMING HOME ALIVE
-  message: 'A golden knife is about to drop.
-
-    Whoever grabs it hunts the rest.
-    Take it, or hide.'
+  fogEnabled: 1
+  fogColor: {r: 0.36, g: 0.38, b: 0.42, a: 1}
+  fogDensity: 0.06
+  fogFadeSeconds: 4
+  title: ONLY ONE OF YOU LEAVES THIS HOUSE ALIVE
+  message: A golden knife is about to drop. Whoever grabs it hunts the rest.
   knifeCollectiblePrefab: {fileID: 2662231107944532836, guid: a21966691731d4f4cbd84817bfc70bdb, type: 3}
-  knifeModelPrefab: {fileID: 919132149155446097, guid: cb7828f1698a5814280377d4a94a00a6, type: 3}
+  knifeModelPrefab: {fileID: 1794211575824980970, guid: c810174ed0fb903438a6b48915cf530c, type: 3}
   dropSound: {fileID: 8300000, guid: 51d74a194b7d5f546b7d2b83b4128d95, type: 3}
-  dropVolume: 0.9
+  dropVolume: 0.5
   grabSound: {fileID: 0}
   grabVolume: 0.8
   stabSound: {fileID: 8300000, guid: dc081b156f0b05844b1a507b873d587a, type: 3}
   knifeIcon: {fileID: 2800000, guid: c3c9c580cc75aac4ab2c8ae924514279, type: 3}
   minDistanceFromCollectibles: 1.4
   minDistanceFromPlayers: 4
+  farthestSpotsPool: 3
 --- !u!4 &1555010439 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 18d286ce42414ed468eafeb37a8500a1, type: 3}
@@ -50651,7 +50730,7 @@ MonoBehaviour:
   enemy: {fileID: 1494911843}
   hidingSpots: []
   wanderSpeed: 2
-  fleeSpeed: 2.4
+  fleeSpeed: 2.1
   wanderRadius: 5
   wanderPause: 0.8
   dangerDistance: 6
@@ -50765,6 +50844,7 @@ MonoBehaviour:
   maxItems: 3
   playerName: Player 2
   characterFaceSprite: {fileID: 6420525423271784499, guid: fce123100f8154f4ca317a46baae7a82, type: 3}
+  portraitSprite: {fileID: 21300000, guid: 91bb4baae5b28154c8fd84465dcd6c9d, type: 3}
   stoneSprite: {fileID: 21300000, guid: 631ee0dde77a8f942beb601df1ab2a6e, type: 3}
   score: 0
   goldScore: 0
@@ -53547,11 +53627,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentalHazard
   roomName: Bathroom
   alertTitle: SEWAGE LEAK
-  alertMessage: 'Toxic fumes are leaking from the bathroom sewage.
-
-    Get out before
-    it is sealed!'
-  sealedMessage: The bathroom is sealed. The air inside is poisonous.
+  alertMessage: Toxic fumes are leaking. Get out of the bathroom!
+  sealedMessage: The bathroom air is poisonous.
   warningSeconds: 5
   area: {fileID: 1733100085}
   extraAreas: []
@@ -61691,6 +61768,7 @@ MonoBehaviour:
   maxItems: 3
   playerName: Player 3
   characterFaceSprite: {fileID: -7905047106246094065, guid: b9eb24c6e69026b4e9874009d8316d35, type: 3}
+  portraitSprite: {fileID: 21300000, guid: 6e23e5c10fc02624ab80e05ef1b03592, type: 3}
   stoneSprite: {fileID: 21300000, guid: 631ee0dde77a8f942beb601df1ab2a6e, type: 3}
   score: 0
   goldScore: 0
@@ -61752,7 +61830,7 @@ MonoBehaviour:
   enemy: {fileID: 1494911843}
   hidingSpots: []
   wanderSpeed: 2
-  fleeSpeed: 2.4
+  fleeSpeed: 2.1
   wanderRadius: 5
   wanderPause: 0.8
   dangerDistance: 6
@@ -64020,11 +64098,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnvironmentalHazard
   roomName: Kitchen
   alertTitle: KITCHEN FIRE
-  alertMessage: 'The stove is spewing flames in the kitchen.
-
-    Get out before
-    it explodes!'
-  sealedMessage: The kitchen exploded and is sealed off.
+  alertMessage: The stove is spewing flames. Get out before it explodes!
+  sealedMessage: The kitchen exploded.
   warningSeconds: 5
   area: {fileID: 2095623409}
   extraAreas: []
@@ -65630,3 +65705,4 @@ SceneRoots:
   - {fileID: 613202576}
   - {fileID: 308458342}
   - {fileID: 691861091}
+  - {fileID: 474561432}
