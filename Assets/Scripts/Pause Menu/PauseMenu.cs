@@ -342,7 +342,7 @@ public class PauseMenu : MonoBehaviour
             "Press H at a hiding spot to get in. He checks hiding spots too, so don't get comfortable.",
             "Your heartbeat speeds up the closer he gets.",
             "Rocks, feathers, door locks, ice guns and whistles: use them to throw him off, or to slow the others down.",
-            "Round 4: a golden knife drops. Whoever grabs it hunts the rest. Only one comes home alive." };
+            "Round 4: a golden knife drops. Whoever grabs it hunts the rest. Only one of you leaves this house alive." };
         float y = 116;
         for (int i = 0; i < rules.Length; i++)
         {

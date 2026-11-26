@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Unity.Cinemachine;
@@ -51,6 +52,35 @@ public class HidingSpot : MonoBehaviour
     [Header("AI hider (optional)")]
     public Transform approachPoint;
 
+    [Header("Disguise (optional, e.g. the floor lamp)")]
+    [Tooltip("The hider stays in the open, standing still in the idle pose, instead of whatever pose he walked in with.")]
+    public bool standStill = false;
+    [Tooltip("Put on the hider's head while hidden (the lamp shade). Its pivot must be the centre of its bottom opening.")]
+    public Transform wornOnHead;
+    [Tooltip("How far below the chin the worn object's opening sits, in metres. It is sized so the whole head (face included) fits inside.")]
+    public float wornDrop = 0.02f;
+    [Tooltip("Size of the worn object compared to a snug fit around the head (1 = just covers the whole head).")]
+    public float wornSize = 1f;
+    [Tooltip("Sideways tilt of the worn object, in degrees, so it sits a little crooked.")]
+    public float wornTilt = 4f;
+    [Tooltip("Stretches the hider while hidden here: below 1 on X/Z makes him thinner, above 1 on Y makes him taller (lamp-shaped). 1,1,1 = unchanged.")]
+    public Vector3 disguiseStretch = Vector3.one;
+    [Tooltip("Head size while hidden here, compared to normal (smaller head = smaller worn object). 1 = unchanged.")]
+    [Range(0.4f, 1f)] public float disguiseHeadSize = 1f;
+    [Tooltip("Shown at the bottom of the screen to the player hiding here. Leave empty for none.")]
+    [TextArea(1, 3)] public string hiddenCaption = "";
+
+    // where the worn object lives while nobody is wearing it
+    Transform wornHome;
+    Vector3 wornHomePos, wornHomeScale;
+    Quaternion wornHomeRot;
+    float wornRadius = 0.2f, wornTopRadius = 0.135f, wornHeight = 0.25f;  // its openings and height, measured from its mesh
+    // the hider's own size, put back when he comes out
+    Hider stretched;
+    Vector3 stretchHome;
+    Transform stretchedHead;
+    Vector3 stretchedHeadHome;
+
     public bool IsFree => occupant == null;
     public Hider Occupant => occupant;
     private Hider occupant;
@@ -63,6 +93,7 @@ public class HidingSpot : MonoBehaviour
     void Awake()
     {
         triggers = System.Array.FindAll(GetComponentsInChildren<Collider>(), c => c.isTrigger);
+        if (wornOnHead != null) MeasureWorn();
     }
 
     void Start()
@@ -105,6 +136,11 @@ public class HidingSpot : MonoBehaviour
             else if (hunter) { hHandledFrame = Time.frameCount; HunterOpen(humanInRange, 1.2f); } // golden knife: open it and stab whoever is inside
         }
 
+        // safety net: if whoever is inside got caught or un-hidden without coming out through Exit,
+        // still put the spot back the way it was (furniture shown, worn object returned, size restored)
+        if (occupant != null && (occupant.IsCaught || !occupant.IsHidden) && !openingByHunter)
+            Exit(occupant);
+
         if (occupant != null && occupant.isHumanControlled && switchedCamera)
             HandleHideLook();
 
@@ -123,6 +159,7 @@ public class HidingSpot : MonoBehaviour
     {
         all.Remove(this);
         HidePrompt.Hide(this);
+        HideCaption.Hide(this);
     }
 
     // Shows "Press [H] to hide", "Press [H] to come out" or "A player is hiding here"
@@ -206,6 +243,19 @@ public class HidingSpot : MonoBehaviour
         if (normalVisual != null) normalVisual.SetActive(false);
         if (hiddenVisual != null) hiddenVisual.SetActive(true);
 
+        // disguise: stand still in the open and wear part of the furniture
+        if (standStill) FreezeStanding(h);
+        // size the worn object on his normal head first, then stretch him
+        Transform head = HeadOf(h);
+        Vector3 wornAt = Vector3.zero;
+        float wornScale = 0f;
+        bool fits = wornOnHead != null && head != null && MeasureHead(h, head, out wornAt, out wornScale);
+        Vector3 headBefore = head != null ? head.position : Vector3.zero;
+        if (disguiseStretch != Vector3.one || disguiseHeadSize != 1f) Stretch(h, head);
+        // the head shrinks around the neck, so the worn object shrinks and moves with it
+        if (fits) PutOnHead(h, head.position + (wornAt - headBefore) * disguiseHeadSize, wornScale * disguiseHeadSize);
+        if (h.isHumanControlled && !string.IsNullOrEmpty(hiddenCaption)) HideCaption.Show(this, hiddenCaption);
+
         if (h.isHumanControlled && hideCamera != null)
         {
             PlaceHideCamera();
@@ -240,6 +290,14 @@ public class HidingSpot : MonoBehaviour
     {
         if (occupant == null || occupant != h) return;
 
+        // back to his own size before he steps out
+        if (stretched == h)
+        {
+            if (stretchedHead != null) stretchedHead.localScale = stretchedHeadHome;
+            h.transform.localScale = stretchHome;
+            stretched = null; stretchedHead = null;
+        }
+
         if (exitPoint != null)
         {
             h.transform.position = exitPoint.position;
@@ -263,6 +321,9 @@ public class HidingSpot : MonoBehaviour
         }
 
         h.transform.rotation = Quaternion.Euler(0f, h.transform.eulerAngles.y, 0f);
+
+        TakeOffHead();
+        HideCaption.Hide(this);
 
         occupant = null;
         h.SetHidden(false);
@@ -309,6 +370,173 @@ public class HidingSpot : MonoBehaviour
     public void NotifyEnemyOpening(float duration)
     {
         if (fridge != null) fridge.EnemyOpens(duration);
+    }
+
+    // ---------- Disguise ----------
+
+    // Snaps the hider into the first frame of his idle and holds it there, so he stands up straight and still
+    void FreezeStanding(Hider h)
+    {
+        int idle = Animator.StringToHash("Idle");
+        foreach (Animator a in h.GetComponentsInChildren<Animator>())
+        {
+            if (!a.isActiveAndEnabled || a.runtimeAnimatorController == null || !a.HasState(0, idle)) continue;
+            a.speed = 1f;
+            a.SetFloat("Speed", 0f);
+            a.Play(idle, 0, 0f);
+            a.Update(0f);
+            a.speed = 0f;
+            a.enabled = false; // nothing rewrites the pose (or the stretch) while he stands there; Exit turns it back on
+        }
+
+        // turn him so his face (not just his root) looks the way the Inside Point faces
+        // (each character's skeleton is named differently, so ask the humanoid rig for the upper arms)
+        Animator rig = h.GetComponentInChildren<Animator>();
+        Transform ls = null, rs = null;
+        if (rig != null && rig.isHuman) { ls = rig.GetBoneTransform(HumanBodyBones.LeftUpperArm); rs = rig.GetBoneTransform(HumanBodyBones.RightUpperArm); }
+        if (ls == null || rs == null) { ls = FindBone(h, "LeftShoulder"); rs = FindBone(h, "RightShoulder"); }
+        if (insidePoint == null || ls == null || rs == null) return;
+        Vector3 face = Vector3.Cross(rs.position - ls.position, Vector3.up);
+        face.y = 0f;
+        if (face.sqrMagnitude < 1e-6f) return;
+        Vector3 want = insidePoint.forward; want.y = 0f;
+        float turn = Vector3.SignedAngle(face, want, Vector3.up);
+        h.transform.RotateAround(insidePoint.position, Vector3.up, turn);
+    }
+
+    // The head bone, from the humanoid rig if there is one (bone names differ per character)
+    static Transform HeadOf(Hider h)
+    {
+        Animator rig = h.GetComponentInChildren<Animator>();
+        if (rig != null && rig.isHuman) { Transform t = rig.GetBoneTransform(HumanBodyBones.Head); if (t != null) return t; }
+        return FindBone(h, "Head");
+    }
+
+    // Size of the worn object's bottom opening and its height, in its own units
+    void MeasureWorn()
+    {
+        wornHome = wornOnHead.parent;
+        wornHomePos = wornOnHead.localPosition;
+        wornHomeRot = wornOnHead.localRotation;
+        wornHomeScale = wornOnHead.localScale;
+
+        MeshFilter mf = wornOnHead.GetComponentInChildren<MeshFilter>(true);
+        if (mf == null || mf.sharedMesh == null) return;
+        Bounds b = mf.sharedMesh.bounds;
+        wornHeight = Mathf.Max(0.01f, b.max.y);
+        wornRadius = Mathf.Max(0.01f, Mathf.Min(b.extents.x, b.extents.z));
+        // the narrower top opening: the widest point near the top
+        float best = 0f;
+        foreach (Vector3 v in mf.sharedMesh.vertices)
+            if (v.y > wornHeight * 0.85f) best = Mathf.Max(best, new Vector2(v.x, v.z).magnitude);
+        if (best > 0.01f) wornTopRadius = Mathf.Min(best, wornRadius);
+    }
+
+    // Measures the posed head: where the worn object's opening goes (just under the neck) and how big it must be
+    bool MeasureHead(Hider h, Transform head, out Vector3 at, out float scale)
+    {
+        at = Vector3.zero; scale = 1f;
+
+        // the posed head's vertices, in world space: every vertex mostly moved by the head bone (or its hair, eyes...)
+        List<Vector3> verts = new List<Vector3>();
+        Mesh baked = new Mesh();
+        foreach (SkinnedMeshRenderer smr in h.GetComponentsInChildren<SkinnedMeshRenderer>())
+        {
+            if (!smr.enabled || smr.sharedMesh == null) continue;
+            smr.BakeMesh(baked, false); // the skinned result is already at world size; only its position and rotation are added below
+            Matrix4x4 m = Matrix4x4.TRS(smr.transform.position, smr.transform.rotation, Vector3.one);
+            Vector3[] vs = baked.vertices;
+            BoneWeight[] bw = smr.sharedMesh.boneWeights;
+            Transform[] bones = smr.bones;
+            bool[] onHead = new bool[bones.Length];
+            for (int b = 0; b < bones.Length; b++) onHead[b] = bones[b] != null && (bones[b] == head || bones[b].IsChildOf(head));
+            bool weighted = bw.Length == vs.Length;
+            for (int i = 0; i < vs.Length; i++)
+            {
+                Vector3 w = m.MultiplyPoint3x4(vs[i]);
+                if (weighted) { int b = bw[i].boneIndex0; if (b < 0 || b >= onHead.Length || !onHead[b]) continue; }
+                else if (w.y < head.position.y) continue; // no skin weights: fall back to 'above the neck'
+                verts.Add(w);
+            }
+        }
+        Destroy(baked);
+        if (verts.Count == 0) return false;
+
+        // the opening sits just under the chin, so the whole head, face included, ends up inside
+        float rim = float.MaxValue;
+        foreach (Vector3 v in verts) rim = Mathf.Min(rim, v.y);
+        rim -= wornDrop;
+        float top = rim, minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+        foreach (Vector3 v in verts)
+        {
+            top = Mathf.Max(top, v.y);
+            minX = Mathf.Min(minX, v.x); maxX = Mathf.Max(maxX, v.x);
+            minZ = Mathf.Min(minZ, v.z); maxZ = Mathf.Max(maxZ, v.z);
+        }
+        if (minX > maxX) return false;
+        Vector3 centre = new Vector3((minX + maxX) * 0.5f, 0f, (minZ + maxZ) * 0.5f);
+
+        // grow it until the head fits everywhere: tall enough for the crown, wide enough at every height
+        // (it narrows towards the top, so the width it needs depends on how tall it already is)
+        for (int i = 0; i < 6; i++)
+        {
+            float need = (top - rim) / (wornHeight * 0.92f);
+            foreach (Vector3 v in verts)
+            {
+                float along = Mathf.Clamp01((v.y - rim) / (wornHeight * scale));
+                float room = Mathf.Lerp(wornRadius, wornTopRadius, along) * 0.97f;
+                float d = new Vector2(v.x - centre.x, v.z - centre.z).magnitude;
+                need = Mathf.Max(need, d / room);
+            }
+            scale = Mathf.Clamp(need, 0.4f, 4f);
+        }
+        scale *= wornSize;
+        at = new Vector3(centre.x, rim, centre.z);
+        return true;
+    }
+
+    // Puts the worn object on the hider's head
+    void PutOnHead(Hider h, Vector3 at, float scale)
+    {
+        // it stays a child of the spot (he can't move while hidden), so his stretched size never skews it
+        wornOnHead.SetParent(wornHome, true);
+        wornOnHead.position = at;
+        wornOnHead.rotation = Quaternion.Euler(0f, h.transform.eulerAngles.y, 0f) * Quaternion.Euler(0f, 0f, wornTilt);
+        Vector3 ps = wornHome != null ? wornHome.lossyScale : Vector3.one;
+        wornOnHead.localScale = new Vector3(scale / ps.x, scale / ps.y, scale / ps.z);
+        wornOnHead.gameObject.SetActive(true);
+    }
+
+    // Makes the body long and thin (lamp-shaped) while the head keeps its own shape (at disguiseHeadSize)
+    void Stretch(Hider h, Transform head)
+    {
+        stretched = h;
+        stretchHome = h.transform.localScale;
+        Vector3 before = head != null ? AxisLengths(head) : Vector3.one;
+        h.transform.localScale = Vector3.Scale(stretchHome, disguiseStretch);
+        stretchedHead = head;
+        if (head == null) return;
+        stretchedHeadHome = head.localScale;
+        Vector3 after = AxisLengths(head);
+        float k = disguiseHeadSize;
+        head.localScale = new Vector3(head.localScale.x * k * before.x / after.x, head.localScale.y * k * before.y / after.y, head.localScale.z * k * before.z / after.z);
+    }
+
+    // How long each of a transform's own axes is in the world (its real size along them)
+    static Vector3 AxisLengths(Transform t)
+    {
+        return new Vector3(t.TransformVector(Vector3.right).magnitude, t.TransformVector(Vector3.up).magnitude, t.TransformVector(Vector3.forward).magnitude);
+    }
+
+    // Puts the worn object back where it lives
+    void TakeOffHead()
+    {
+        if (wornOnHead == null || wornHome == null) return;
+        wornOnHead.SetParent(wornHome, false);
+        wornOnHead.localPosition = wornHomePos;
+        wornOnHead.localRotation = wornHomeRot;
+        wornOnHead.localScale = wornHomeScale;
+        if (hiddenVisual == null || hiddenVisual.transform != wornOnHead) wornOnHead.gameObject.SetActive(false);
     }
 
     // Freezes the animation and copies the stored skeleton pose onto the character
