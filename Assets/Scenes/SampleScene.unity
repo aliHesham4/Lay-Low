@@ -49863,6 +49863,54 @@ MonoBehaviour:
   minRemaining: 0.9
   nearStallSeconds: 1
   logRecoveries: 0
+--- !u!1 &1500105858
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1500105860}
+  - component: {fileID: 1500105859}
+  m_Layer: 0
+  m_Name: Music
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1500105859
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1500105858}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3887b11eb138e1b44b36fa5b52221ecc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MusicPlayer
+  track: {fileID: 8300000, guid: 73f4b9ac356191f44958b806a16b82ec, type: 3}
+  volume: 0.3
+  mixer: {fileID: 24100000, guid: 4c2a62cf9fad79d4191cf6091dd52472, type: 2}
+  fadeIn: 2
+--- !u!4 &1500105860
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1500105858}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1501005755
 GameObject:
   m_ObjectHideFlags: 0
@@ -69138,3 +69186,4 @@ SceneRoots:
   - {fileID: 474561432}
   - {fileID: 997347536}
   - {fileID: 458960172}
+  - {fileID: 1500105860}
