@@ -1,0 +1,83 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6445683737450491925
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 222223191973861106}
+  - component: {fileID: 1592767430524473412}
+  m_Layer: 0
+  m_Name: Round Intro
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &222223191973861106
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6445683737450491925}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1592767430524473412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6445683737450491925}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad79cf5cd51904e4cbdd9f8aceacd5ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RoundIntro
+  vignette: {fileID: 21300000, guid: 976716436b3713445aa81e81001f2d63, type: 3}
+  titleBase: {fileID: 21300000, guid: f7190bcf43fc840458a044df97fd856a, type: 3}
+  number1: {fileID: 21300000, guid: 60fb442381afbcc4fb952e7012ac622f, type: 3}
+  number2: {fileID: 21300000, guid: 55e380b437ac59a41aa8866941ac712d, type: 3}
+  number3: {fileID: 21300000, guid: aab659b93add9fa4e8614f88def9f577, type: 3}
+  number4: {fileID: 21300000, guid: 6ea5d3987afd4ed4b8b55457d99624a1, type: 3}
+  shutterSlats: {fileID: 21300000, guid: df213ca1eae37fe47889c5e7edaa2111, type: 3}
+  shutterRail: {fileID: 21300000, guid: 2aecaa311dd608944a49d31c7c9f5c5b, type: 3}
+  shutterCord: {fileID: 21300000, guid: 15d7e0563c3d7a14b95c6f56981fe41f, type: 3}
+  hand: {fileID: 21300000, guid: 140ab847c6514cb44b5c8a8ee363493e, type: 3}
+  rollerBox: {fileID: 21300000, guid: 3b055121c78ecfc4d9f9931b32037ed8, type: 3}
+  stamp: {fileID: 21300000, guid: 775fade906b24554b8da4eab6263a339, type: 3}
+  stampBell: {fileID: 21300000, guid: 82866bb51d89e6b43b4171b7a3135fe8, type: 3}
+  tape1: {fileID: 21300000, guid: 06ebfbe06611fe94888004c4cccec24b, type: 3}
+  tape2: {fileID: 21300000, guid: e8943c4acc3486a45a8f26e1dbf37410, type: 3}
+  banner: {fileID: 21300000, guid: 1eb7306eafb262a429a4ced043d560ae, type: 3}
+  bulbCord: {fileID: 21300000, guid: af7abbe97a4c7d3408171f6c991152f7, type: 3}
+  bulbGlow: {fileID: 21300000, guid: 00fc26c9083572c4ea3f908da7fe5d8a, type: 3}
+  bulbGlass: {fileID: 21300000, guid: 73b4bb5336998a0408138dc01470ed47, type: 3}
+  neonRound: {fileID: 21300000, guid: ba12c943749c43e45a51774f9c20158d, type: 3}
+  neon3: {fileID: 21300000, guid: c33985abeb6bdc84ba4e7b7d2d2e93c0, type: 3}
+  neonBanner: {fileID: 21300000, guid: 67b336bcd6f9e9841881fb53297d0b81, type: 3}
+  tombstone: {fileID: 21300000, guid: 8f3c0e940efb8a846855450ce94a7560, type: 3}
+  minClosedSeconds: 2
+  sortingOrder: 500
+  startOpen: 0
+  shutterSlam: {fileID: 8300000, guid: 2ab63312424673b448540d22fc8f05db, type: 3}
+  shutterOpen: {fileID: 8300000, guid: fd3565f7d5310094b857912804673645, type: 3}
+  popSound: {fileID: 0}
+  stampSound: {fileID: 8300000, guid: cf824b881e35f984facbff331420e331, type: 3}
+  doorbellSound: {fileID: 8300000, guid: 20480365939cc7f4c8e7b6d2691862a8, type: 3}
+  tapeSound: {fileID: 8300000, guid: 3d537a082692b364880c6b04812baf5b, type: 3}
+  creakSound: {fileID: 0}
+  flickerSound: {fileID: 8300000, guid: 94a49951a73eed94bb309961eb6f20c5, type: 3}
+  lightsOutSound: {fileID: 8300000, guid: fea47549ae09a864ba694bb397f97b88, type: 3}
+  rumbleSound: {fileID: 8300000, guid: 24bde50781c6cfb4b914cac80f55e85c, type: 3}
+  volume: 0.6

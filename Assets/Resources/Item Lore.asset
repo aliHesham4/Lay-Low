@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a84f8db3d39bdc749807981d74a622ce, type: 3}
+  m_Name: Item Lore
+  m_EditorClassIdentifier: Assembly-CSharp::ItemLore
+  items:
+  - id: rock
+    displayName: Rock
+    description: Chipped off the old garden path. The family before you used them
+      to keep him out.
+  - id: feather
+    displayName: Feather
+    description: From the clown's old party hat. Tickling the kids was his favourite
+      party trick.
+  - id: doorlock
+    displayName: Door Lock
+    description: Someone fitted dozens of these. It didn't help them.
+  - id: icegun
+    displayName: Ice Gun
+    description: A kid's freeze-ray toy from the last birthday party. It still works.
+  - id: whistle
+    displayName: Whistle
+    description: A party whistle. He comes running to it, every time.
+  - id: goldenknife
+    displayName: Golden Knife
+    description: His gift. Whoever holds it gets to play by his rules.

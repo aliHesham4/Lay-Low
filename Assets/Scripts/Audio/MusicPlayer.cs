@@ -42,6 +42,12 @@ public class MusicPlayer : MonoBehaviour
 
     void FadeOut(float seconds) { fadeOutSpeed = volume / Mathf.Max(0.05f, seconds); }
 
+    // Fades out whatever track is playing (e.g. on the match-over scoreboard).
+    public static void FadeOutCurrent(float seconds)
+    {
+        if (current != null && current.fadeOutSpeed <= 0f) current.FadeOut(seconds);
+    }
+
     void Update()
     {
         if (source == null) return;

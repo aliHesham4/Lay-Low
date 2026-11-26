@@ -39,6 +39,11 @@ public class PauseMenu : MonoBehaviour
 
     RectTransform root;
     GameObject mainScr, settingsScr, controlsScr, restartScr, leaveScr, howScr, current;
+    // the objectives note on the right of the main screen
+    TextMeshProUGUI objectivesTitle, objectivesText;
+    // the "Your bag" note under it (the inventory, with each item's story)
+    readonly Image[] bagIcon = new Image[4];
+    readonly TextMeshProUGUI[] bagName = new TextMeshProUGUI[4], bagText = new TextMeshProUGUI[4];
     Action sheetClosed;
     TextMeshProUGUI subtitle, restartText;
     readonly List<PaperShape> bulbs = new List<PaperShape>();
@@ -114,7 +119,50 @@ public class PauseMenu : MonoBehaviour
         subtitle.text = "Round " + r + " of " + rm.totalRounds + "  ·  " + (s / 60) + ":" + (s % 60).ToString("00") + " on the clock  ·  the house is frozen";
         restartText.text = "Round " + r + " starts over for everyone. Points from this round are gone" + (r > 1 ? "; earlier rounds keep their score." : ".");
         root.gameObject.SetActive(true);
+        RefreshObjectives();
+        RefreshBag();
         Show(mainScr);
+    }
+
+    // Fills the "Your bag" note: each carried item (and the golden knife, if held) with its story; empty slots say so.
+    void RefreshBag()
+    {
+        if (bagName[0] == null) return;
+        Hider human = null;
+        foreach (Hider h in FindObjectsByType<Hider>(FindObjectsSortMode.None)) if (h.isHumanControlled) human = h;
+        PlayerHUD hud = human != null ? human.GetComponent<PlayerHUD>() : null;
+        var ids = new System.Collections.Generic.List<string>();
+        var icons = new System.Collections.Generic.List<Sprite>();
+        if (human != null && KnifeHolder.IsHolder(human)) { ids.Add("goldenknife"); icons.Add(null); }
+        if (hud != null) for (int i = 0; i < hud.CarriedIds.Count; i++) { ids.Add(hud.CarriedIds[i]); icons.Add(hud.CarriedIcons[i]); }
+
+        for (int i = 0; i < 4; i++)
+        {
+            bool has = i < ids.Count;
+            bool show = has || i < 3; // three bag slots always show; the 4th row only for the knife
+            bagIcon[i].gameObject.SetActive(has && icons[i] != null);
+            if (has) bagIcon[i].sprite = icons[i];
+            ItemLoreEntry e = has ? ItemLore.Find(ids[i]) : null;
+            bagName[i].gameObject.SetActive(show);
+            bagText[i].gameObject.SetActive(show);
+            bagName[i].text = has ? (e != null ? e.displayName : ids[i]) : "<color=#a99c90>Empty</color>";
+            bagText[i].text = has && e != null ? e.description : "";
+        }
+    }
+
+    // Writes the night's objectives on the note: open ones in charcoal, done ones crossed out.
+    void RefreshObjectives()
+    {
+        if (objectivesText == null) return;
+        objectivesTitle.text = "NIGHT " + RoundManager.CurrentRound + "  OBJECTIVES";
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        foreach (var o in ObjectiveManager.Instance.Visible())
+        {
+            if (sb.Length > 0) sb.Append('\n');
+            if (o.Value) sb.Append("<color=#a99c90><s>").Append(o.Key.text).Append("</s></color>");
+            else sb.Append("<color=#c8171f>›</color>  ").Append(o.Key.text);
+        }
+        objectivesText.text = sb.ToString();
     }
 
     public void Close()
@@ -215,6 +263,47 @@ public class PauseMenu : MonoBehaviour
         Ticket(s, 96, y, 470, 58, "05", "Leave the house", Dust, Dust, () => Show(leaveScr), true); y += 72;
         TextMeshProUGUI esc = T(s, "PRESS ESC TO RESUME", 15f, Faint, 96, y, 400, 24, 0);
         PaperUI.LetterSpacing(esc, 1f);
+
+        // the night's objectives, on a cream note pinned on the right
+        RectTransform note = PaperUI.Place(PaperUI.Rect("Objectives", s), 712, 214, 410, 226);
+        PaperShape paper = PaperUI.Cut(PaperUI.Torn(note, "Paper", PaperUI.Hex("fbf4e4"), PaperUI.NewsTear));
+        paper.edgeColor = PaperUI.Hex("e2d3b4"); paper.Refresh();
+        PaperUI.Stretch(paper.rectTransform);
+        PaperShape pin = PaperUI.Shape(note, "Pin", Red, 9f);
+        PaperUI.Place(pin.rectTransform, 201, 8, 18, 18);
+        pin.shadow = true; pin.shadowOffset = new Vector2(2f, -3f); pin.shadowColor = new Color(0, 0, 0, 0.45f); pin.Refresh();
+        objectivesTitle = PaperUI.Text(note, "Title", "OBJECTIVES", 30f, Red, true, TextAlignmentOptions.Center);
+        objectivesTitle.font = PaperUI.Title;
+        PaperUI.Place(objectivesTitle.rectTransform, 20, 30, 380, 40);
+        objectivesText = PaperUI.Text(note, "List", "", 20f, PaperUI.Hex("2b2427"), true, TextAlignmentOptions.TopLeft);
+        PaperUI.Place(objectivesText.rectTransform, 34, 80, 352, 140);
+        objectivesText.textWrappingMode = TextWrappingModes.Normal;
+        objectivesText.paragraphSpacing = 10f;
+        objectivesText.enableAutoSizing = true; objectivesText.fontSizeMin = 13f; objectivesText.fontSizeMax = 20f;
+        PaperUI.Rotate(note, 1.5f);
+
+        // "Your bag": what the player carries, each item with its story
+        RectTransform bag = PaperUI.Place(PaperUI.Rect("Your Bag", s), 722, 454, 410, 252);
+        PaperShape bagPaper = PaperUI.Cut(PaperUI.Torn(bag, "Paper", PaperUI.Hex("fbf4e4"), PaperUI.CardTear));
+        bagPaper.edgeColor = PaperUI.Hex("e2d3b4"); bagPaper.Refresh();
+        PaperUI.Stretch(bagPaper.rectTransform);
+        TextMeshProUGUI bagTitle = PaperUI.Text(bag, "Title", "YOUR BAG", 24f, Red, true, TextAlignmentOptions.Left);
+        bagTitle.font = PaperUI.Title;
+        PaperUI.Place(bagTitle.rectTransform, 26, 14, 300, 32);
+        for (int i = 0; i < 4; i++)
+        {
+            float ry = 52 + i * 62;
+            bagIcon[i] = PaperUI.Img(bag, "Icon " + i, null);
+            bagIcon[i].preserveAspect = true;
+            PaperUI.Place(bagIcon[i].rectTransform, 24, ry, 38, 38);
+            bagName[i] = PaperUI.Text(bag, "Name " + i, "", 17f, PaperUI.Hex("2b2427"), true, TextAlignmentOptions.TopLeft);
+            PaperUI.Place(bagName[i].rectTransform, 72, ry - 2, 310, 20);
+            bagText[i] = PaperUI.Text(bag, "Story " + i, "", 15f, PaperUI.Hex("5e524a"), false, TextAlignmentOptions.TopLeft);
+            PaperUI.Place(bagText[i].rectTransform, 72, ry + 19, 316, 36);
+            bagText[i].textWrappingMode = TextWrappingModes.Normal;
+            bagText[i].enableAutoSizing = true; bagText[i].fontSizeMin = 13f; bagText[i].fontSizeMax = 15f;
+        }
+        PaperUI.Rotate(bag, -1f);
         return s.gameObject;
     }
 
@@ -361,7 +450,7 @@ public class PauseMenu : MonoBehaviour
         KeyRow(sheet, R, k, new[] { "Space" }, "Jump"); k += step;
         KeyRow(sheet, R, k, new[] { "V" }, "First or third person"); k += step;
         KeyRow(sheet, R, k, new[] { "H" }, "Hide, or come out"); k += step;
-        KeyRow(sheet, R, k, new[] { "T" }, "Rock: aim, click the floor"); k += step;
+        KeyRow(sheet, R, k, new[] { "R" }, "Rock: aim, click the floor"); k += step;
         KeyRow(sheet, R, k, new[] { "F" }, "Feather: tickle a player"); k += step;
         KeyRow(sheet, R, k, new[] { "E" }, "Door lock: lock a doorway"); k += step;
         KeyRow(sheet, R, k, new[] { "G" }, "Ice gun: freeze a player"); k += step;
@@ -391,7 +480,7 @@ public class PauseMenu : MonoBehaviour
         KeyRow(sheet, L, 394, new[] { "Esc" }, "Pause and resume, nothing else");
 
         T(sheet, "Using what you find", 21f, Gold, R, 80, 500, 30, 2);
-        KeyRow(sheet, R, 112, new[] { "T" }, "Rock: aim, then click the floor");
+        KeyRow(sheet, R, 112, new[] { "R" }, "Rock: aim, then click the floor");
         KeyRow(sheet, R, 158, new[] { "F" }, "Feather: click a card to tickle");
         KeyRow(sheet, R, 204, new[] { "E" }, "Door lock: click a doorway");
         KeyRow(sheet, R, 250, new[] { "G" }, "Ice gun: click a card to freeze");

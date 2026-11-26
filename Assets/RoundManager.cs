@@ -51,9 +51,18 @@ public class RoundManager : MonoBehaviour
     public static void ResetMatch() { currentRound = 1; scores.Clear(); history.Clear(); matchStarted = false; }
 
     public static int CurrentRound { get { return currentRound; } }
+
+    // Called by a night scene (Night 1-4) before the house loads under it: this is the round being played.
+    public static void BeginNight(int night)
+    {
+        currentRound = Mathf.Clamp(night, 1, 4);
+        matchStarted = true;
+    }
     public float TimeLeft { get { return timeLeft; } }
     public bool RoundOver { get { return roundOver; } }
     public bool IntroDone { get { return introDone; } }
+    // set by a cutscene (the clown's greeting): the round clock waits until it is over
+    public bool ClockHeld { get; set; }
 
     // pause menu: play this round again from the elevator (nothing has been scored for it yet)
     public void RestartRound()
@@ -130,7 +139,7 @@ public class RoundManager : MonoBehaviour
         }
         if (toastText != null && toastText.gameObject.activeSelf && Time.unscaledTime > toastUntil) toastText.gameObject.SetActive(false);
         if (roundOver) { UpdateResults(); return; }
-        if (!introDone) return; // no clock while the round intro plays
+        if (!introDone || ClockHeld) return; // no clock while the round intro or a cutscene plays
 
         timeLeft -= Time.deltaTime;
         if (timeLeft <= 0f) { timeLeft = 0f; EndRound("Time's up!"); }
@@ -163,6 +172,11 @@ public class RoundManager : MonoBehaviour
         if (roundOver) return;
         roundOver = true;
         StartCoroutine(SilenceAppliances());
+
+        // tell the story how this night went for the human player (this is what unlocks the next night)
+        bool humanAlive = false;
+        foreach (Hider h in hiders) if (h != null && h.isHumanControlled && !h.IsCaught) humanAlive = true;
+        StoryStateManager.Instance.CompleteNight(currentRound, humanAlive);
 
         // scores, each player's result this round, and the scoreboard rows
         List<ScoreLine> lines = new List<ScoreLine>();
@@ -249,7 +263,25 @@ public class RoundManager : MonoBehaviour
     void ShowFinal()
     {
         matchOver = true;
+        MusicPlayer.FadeOutCurrent(3f); // the soundtrack dies away under the final scoreboard
         if (toastText != null) toastText.gameObject.SetActive(false);
+
+        // the ending first, written on the shutter, then the final scoreboard behind it
+        int best = int.MinValue, mine = int.MinValue;
+        foreach (Hider h in hiders)
+        {
+            if (h == null) continue;
+            int s; scores.TryGetValue(h.displayName, out s);
+            best = Mathf.Max(best, s);
+            if (h.isHumanControlled) mine = s;
+        }
+        string ending = StoryStateManager.Instance.EndingFor(mine == best);
+        if (RoundIntro.Instance != null) RoundIntro.Instance.ShowEnding(ending, 7f, FinalBoard);
+        else FinalBoard();
+    }
+
+    void FinalBoard()
+    {
         List<ScoreLine> standings = new List<ScoreLine>();
         foreach (Hider h in hiders)
         {
@@ -280,6 +312,8 @@ public class RoundManager : MonoBehaviour
     void NewMatch()
     {
         ResetMatch();
+        StoryStateManager.Instance.ResetStory();
+        StoryStateManager.Instance.SetFlag("movedIn");
         LoadNextBehindBlind();
     }
 
@@ -290,14 +324,22 @@ public class RoundManager : MonoBehaviour
         if (loadingNext) return;
         loadingNext = true;
         nextAt = float.MaxValue;
+        // each round is its own scene (Night 1-4), which loads the house under itself;
+        // if the night scenes aren't in the build, the house scene is just reloaded as before
+        // the next night only opens once the story says the one before it is over
+        // (a restart replays the same night, which the story already allows)
+        StoryStateManager story = StoryStateManager.Instance;
+        if (!story.CanStartNight(currentRound)) currentRound = story.FurthestNight();
+        string night = NightScene.SceneName(currentRound);
+        bool hasNight = Application.CanStreamedLevelBeLoaded(night);
         int scene = SceneManager.GetActiveScene().buildIndex;
         if (RoundIntro.Instance == null)
         {
             Time.timeScale = 1f;
-            SceneManager.LoadScene(scene);
+            if (hasNight) SceneManager.LoadScene(night); else SceneManager.LoadScene(scene);
             return;
         }
-        RoundIntro.Instance.CloseShutter(() => SceneManager.LoadSceneAsync(scene));
+        RoundIntro.Instance.CloseShutter(() => { if (hasNight) SceneManager.LoadSceneAsync(night); else SceneManager.LoadSceneAsync(scene); });
     }
 
 

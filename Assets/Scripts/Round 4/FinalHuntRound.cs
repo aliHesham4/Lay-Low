@@ -178,6 +178,7 @@ struct KeyValuePairSpot
                 if (!NearCollectible(c) && UnityEngine.AI.NavMesh.SamplePosition(c, out nh, 0.3f, UnityEngine.AI.NavMesh.AllAreas)) { at = c; ring = 99; break; }
             }
         Place(at);
+        StoryStateManager.Instance.SetFlag("knifeDropped");
     }
 
     static void Play2D(AudioClip clip, float volume)
@@ -246,5 +247,10 @@ bool NearCollectible(Vector3 p)
 
         if (grabSound != null) Play2D(grabSound, grabVolume);
         if (RoundManager.Instance != null) RoundManager.Instance.Toast(h.displayName + " grabbed the golden knife!");
+
+        // story: who has the knife (the objectives follow these)
+        StoryStateManager.Instance.SetFlag("knifeTaken");
+        StoryStateManager.Instance.SetFlag(h.isHumanControlled ? "grabbedKnife" : "knifeTakenByOther");
+        if (h.isHumanControlled) ItemLore.FirstPickup("goldenknife");
     }
 }

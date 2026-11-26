@@ -571,7 +571,15 @@ public class MainMenu : MonoBehaviour
         PlayerPrefs.Save();
         StaticStateReset.ForNewMatch();
         RoundManager.ResetMatch();
-        SceneManager.LoadScene(gameScene);
+        // a new story: the family has just moved in
+        StoryStateManager.Instance.ResetStory();
+        StoryStateManager.Instance.SetFlag("movedIn");
+        // the shutter comes down here, over the menu, and only once it is shut does Night 1 start loading;
+        // the house's RoundManager opens it again when the round is ready
+        string first = NightScene.SceneName(1);
+        string target = Application.CanStreamedLevelBeLoaded(first) ? first : gameScene;
+        if (RoundIntro.Instance != null) RoundIntro.Instance.CloseShutter(() => SceneManager.LoadSceneAsync(target));
+        else SceneManager.LoadSceneAsync(target);
     }
 
     // ---------------- pieces ----------------

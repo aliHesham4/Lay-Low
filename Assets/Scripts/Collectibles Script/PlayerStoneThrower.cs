@@ -55,7 +55,7 @@ public class PlayerStoneThrower : MonoBehaviour
         }
 
         // Enter targeting mode
-        if (!isTargeting && Keyboard.current.tKey.wasPressedThisFrame)
+        if (!isTargeting && Keyboard.current.rKey.wasPressedThisFrame)
         {
             isTargeting = true;
             if (targetIndicator != null) targetIndicator.SetActive(true);
@@ -74,7 +74,7 @@ public class PlayerStoneThrower : MonoBehaviour
                 StartCoroutine(ThrowStoneRoutine(targetIndicator.transform.position));
             }
             // T again or right click to cancel (the same keys as the other items)
-            else if (Mouse.current.rightButton.wasPressedThisFrame || Keyboard.current.tKey.wasPressedThisFrame)
+            else if (Mouse.current.rightButton.wasPressedThisFrame || Keyboard.current.rKey.wasPressedThisFrame)
             {
                 StopTargeting();
             }
@@ -95,7 +95,7 @@ public class PlayerStoneThrower : MonoBehaviour
         if (hint == null)
         {
             if (!on || playerHUD == null || playerHUD.bagIcon == null) return;
-            hint = PaperUI.Hint(playerHUD.bagIcon.canvas.rootCanvas.transform, "Click the floor to throw the rock", "T");
+            hint = PaperUI.Hint(playerHUD.bagIcon.canvas.rootCanvas.transform, "Click the floor to throw the rock", "R");
         }
         hint.SetActive(on);
     }

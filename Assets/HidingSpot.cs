@@ -209,6 +209,7 @@ public class HidingSpot : MonoBehaviour
 
     public bool TryEnter(Hider h)
     {
+        if (!Application.isPlaying) return false; // never change the saved scene from the editor
         if (h == null || h.IsCaught || occupant != null) return false;
 
         // Trigger dust at the hider's feet BEFORE teleporting them to insidePoint
@@ -254,7 +255,9 @@ public class HidingSpot : MonoBehaviour
         if (disguiseStretch != Vector3.one || disguiseHeadSize != 1f) Stretch(h, head);
         // the head shrinks around the neck, so the worn object shrinks and moves with it
         if (fits) PutOnHead(h, head.position + (wornAt - headBefore) * disguiseHeadSize, wornScale * disguiseHeadSize);
-        if (h.isHumanControlled && !string.IsNullOrEmpty(hiddenCaption)) HideCaption.Show(this, hiddenCaption);
+        // the caption, with the hider's name on it, shows the first time only (once per game)
+        if (h.isHumanControlled && !string.IsNullOrEmpty(hiddenCaption) && StoryStateManager.Instance.SetFlag("hidIn_" + name))
+            HideCaption.Show(this, hiddenCaption, h.displayName);
 
         if (h.isHumanControlled && hideCamera != null)
         {

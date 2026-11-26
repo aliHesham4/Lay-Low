@@ -9,7 +9,7 @@ public class HideCaption : MonoBehaviour
     private static HideCaption instance;
 
     // Called by the hiding spot the player just hid in
-    public static void Show(Object owner, string text)
+    public static void Show(Object owner, string text, string speaker = "")
     {
         if (instance == null)
         {
@@ -19,10 +19,20 @@ public class HideCaption : MonoBehaviour
         }
         instance.owner = owner;
         instance.label.text = text;
+        instance.nameTag.SetActive(!string.IsNullOrEmpty(speaker));
+        instance.nameText.text = speaker;
         instance.label.maxVisibleCharacters = 0; // typed out one letter at a time (the panel is already sized to the full line)
         instance.wanted = true;
+        instance.hideAt = 0f;
         instance.shownAt = Time.unscaledTime;
         LayoutRebuilder.MarkLayoutForRebuild(instance.panel);
+    }
+
+    // Shows the caption for a few seconds, then it goes by itself (e.g. an item's story when it is first picked up)
+    public static void ShowFor(Object owner, string text, string speaker, float seconds)
+    {
+        Show(owner, text, speaker);
+        instance.hideAt = Time.unscaledTime + seconds;
     }
 
     // Called by that spot when the player comes out (only the spot showing it can hide it)
@@ -34,10 +44,12 @@ public class HideCaption : MonoBehaviour
     // ---------------------------------------------------------------
     private Object owner;
     private bool wanted;
+    private float hideAt;   // > 0: hides itself at this time
     private float shownAt;
     private CanvasGroup group;
     private RectTransform panel;
-    private TextMeshProUGUI label;
+    private TextMeshProUGUI label, nameText;
+    private GameObject nameTag;
     const float LettersPerSecond = 28f;
     const float BottomY = 55f;
     // torn edges all round, with the top-right corner cut off where it is folded over (fractions, measured from the top-left)
@@ -84,17 +96,31 @@ public class HideCaption : MonoBehaviour
         row.childControlHeight = true;
         row.childForceExpandWidth = false;
         row.childForceExpandHeight = false;
-        row.padding = new RectOffset(28, 28, 12, 14);
+        row.padding = new RectOffset(28, 28, 24, 14); // room under the name tag
         ContentSizeFitter fit = scrap.gameObject.AddComponent<ContentSizeFitter>();
         fit.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
         fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         label = PaperUI.Text(panel, "Text", "", 24f, PaperUI.Hex("2b2427"), true, TextAlignmentOptions.Center);   // charcoal ink
+
+        // the speaker's name on a dark scrap stuck to the top-left edge (like the dialogue box)
+        PaperShape tag = PaperUI.Cut(PaperUI.Torn(panel, "Name Tag", PaperUI.CardDark, PaperUI.TagTear));
+        RectTransform tr = tag.rectTransform;
+        tr.anchorMin = tr.anchorMax = new Vector2(0f, 1f); tr.pivot = new Vector2(0f, 0.5f);
+        tr.sizeDelta = new Vector2(170f, 36f); tr.anchoredPosition = new Vector2(18f, 4f);
+        tr.localEulerAngles = new Vector3(0f, 0f, 2f);
+        tag.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        nameText = PaperUI.Text(tr, "Name", "", 19f, PaperUI.Light, true, TextAlignmentOptions.Center);
+        PaperUI.Stretch(nameText.rectTransform);
+        nameTag = tag.gameObject;
+        nameTag.SetActive(false);
     }
 
     void Update()
     {
+        if (wanted && hideAt > 0f && Time.unscaledTime > hideAt) { wanted = false; hideAt = 0f; }
         group.alpha = Mathf.MoveTowards(group.alpha, wanted ? 1f : 0f, Time.unscaledDeltaTime * 6f);
+        if (PauseMenu.IsOpen) group.alpha = 0f; // never shows through the pause menu
         // rises in and settles, with a slight tilt like a stuck-on paper label
         float t = (Time.unscaledTime - shownAt) / 0.35f;
         float e = t < 1f ? PaperUI.EaseOutBack(t) : 1f;

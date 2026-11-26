@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,9 +29,11 @@ public class RoundIntro : MonoBehaviour
 
     [Header("Timing")]
     [Tooltip("The blind stays shut at least this long, even if the next round is ready sooner.")]
-    public float minClosedSeconds = 1.0f;
+    public float minClosedSeconds = 2.0f;
     [Tooltip("Sorting order of the overlay canvas (above every HUD).")]
     public int sortingOrder = 500;
+    [Tooltip("Tick on the copy in the main menu: it starts open (hidden) and only shuts when 'Start the night' is pressed.")]
+    public bool startOpen = false;
 
     [Header("Sounds (optional)")]
     public AudioClip shutterSlam, shutterOpen, popSound, stampSound, doorbellSound,
@@ -50,6 +53,9 @@ public class RoundIntro : MonoBehaviour
     GameObject r1, r2, r3, r4;
     AudioSource audioSrc;
     Coroutine running;
+    // the story strip under the card: one line of recap + the night's objective
+    CanvasGroup storyGroup;
+    TextMeshProUGUI recapText, objectiveText;
 
     void Awake()
     {
@@ -58,7 +64,9 @@ public class RoundIntro : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         Build();
         // a fresh launch starts behind a shut blind; RoundManager opens it once round 1 is ready
-        SetClosedPose();
+        // (the main menu's copy starts open and is shut by 'Start the night')
+        if (startOpen) { HideAll(); IsShut = false; }
+        else SetClosedPose();
     }
 
     void OnDestroy() { if (Instance == this) Instance = null; }
@@ -75,6 +83,46 @@ public class RoundIntro : MonoBehaviour
     {
         if (running != null) StopCoroutine(running);
         running = StartCoroutine(ShowRoutine(Mathf.Clamp(round, 1, 4), onDone));
+    }
+
+    // The ending: the blind comes down one last time with the ending written on it, stays for 'hold' seconds
+    // (Space / Enter after the first 2 s moves on), then rises again and onDone runs (the final scoreboard).
+    public void ShowEnding(string text, float hold, Action onDone)
+    {
+        if (running != null) StopCoroutine(running);
+        running = StartCoroutine(EndingRoutine(text, hold, onDone));
+    }
+
+    IEnumerator EndingRoutine(string text, float hold, Action onDone)
+    {
+        IsPlaying = true;
+        SetRound(0);
+        recapText.text = text;
+        objectiveText.text = "<color=#c8171f>-  THE END  -</color>";
+        Play(shutterSlam, 0.68f);
+        for (float t = 0f; t < CLOSED_AT; t += Time.unscaledDeltaTime) { Pose(t, 0); yield return null; }
+        SetClosedPose();
+
+        for (float w = 0f; w < hold; w += Time.unscaledDeltaTime)
+        {
+            UnityEngine.InputSystem.Keyboard k = UnityEngine.InputSystem.Keyboard.current;
+            if (w > 2f && k != null && (k.spaceKey.wasPressedThisFrame || k.enterKey.wasPressedThisFrame)) break;
+            yield return null;
+        }
+
+        // the blind rolls back up (only the blind: no round card)
+        Play(shutterOpen, 0.7f);
+        for (float t = CLOSED_AT; t < 0.34f * LOOP; t += Time.unscaledDeltaTime)
+        {
+            Pose(t, 0);
+            cardGroup.alpha = 0f; vignetteGroup.alpha = 0f;
+            yield return null;
+        }
+        HideAll();
+        IsShut = false;
+        IsPlaying = false;
+        running = null;
+        onDone?.Invoke();
     }
 
 // Testing: freeze the intro of a round at a moment of the 9 s design loop (e.g. from the editor).
@@ -101,6 +149,7 @@ public class RoundIntro : MonoBehaviour
     IEnumerator CloseRoutine(Action onClosed)
     {
         IsPlaying = true;
+        SetStory(RoundManager.CurrentRound); // the night that is about to load (already moved on by RoundManager)
         SetRound(0);
         Play(shutterSlam, 0.68f);
         for (float t = 0f; t < CLOSED_AT; t += Time.unscaledDeltaTime)
@@ -116,6 +165,7 @@ public class RoundIntro : MonoBehaviour
     {
         IsPlaying = true;
         if (!IsShut) { yield return CloseRoutine(null); }
+        SetStory(round); // written on the shut blind before it rises
         while (Time.realtimeSinceStartup - closedSince < minClosedSeconds) yield return null;
 
         SetRound(round);
@@ -389,11 +439,42 @@ public class RoundIntro : MonoBehaviour
         HandBase = handRT.anchoredPosition;
         boxGroup = Group(Img("Roller Box", shake, rollerBox, 0, 0, 1328, 78).gameObject);
 
+        BuildStory();
+
         audioSrc = gameObject.AddComponent<AudioSource>();
         audioSrc.playOnAwake = false; audioSrc.spatialBlend = 0f; audioSrc.ignoreListenerPause = true;
     }
 
     GameObject r3bannerGO;
+
+    // A torn cream paper note pinned to the middle of the shutter: it comes down and goes up with the blind,
+    // so the recap and the next objective are read while the blind is shut
+    void BuildStory()
+    {
+        RectTransform strip = PaperUI.Place(PaperUI.Rect("Story", shutter), 220, 286, 840, 128);
+        storyGroup = Group(strip.gameObject);
+        PaperShape paper = PaperUI.Cut(PaperUI.Torn(strip, "Paper", PaperUI.Hex("fbf4e4"), PaperUI.NewsTear));
+        paper.edgeColor = PaperUI.Hex("e2d3b4"); paper.Refresh();
+        PaperUI.Stretch(paper.rectTransform);
+        PaperUI.Rotate(strip, -0.8f);
+
+        recapText = PaperUI.Text(strip, "Recap", "", 20f, PaperUI.Hex("2b2427"), false, TextAlignmentOptions.Center);
+        PaperUI.Place(recapText.rectTransform, 30, 18, 780, 44);
+        recapText.textWrappingMode = TextWrappingModes.Normal;
+        recapText.enableAutoSizing = true; recapText.fontSizeMin = 16f; recapText.fontSizeMax = 26f;
+
+        objectiveText = PaperUI.Text(strip, "Objective", "", 21f, PaperUI.Hex("2b2427"), true, TextAlignmentOptions.Center);
+        PaperUI.Place(objectiveText.rectTransform, 30, 70, 780, 40);
+        objectiveText.enableAutoSizing = true; objectiveText.fontSizeMin = 16f; objectiveText.fontSizeMax = 26f;
+    }
+
+    void SetStory(int round)
+    {
+        string recap, goal;
+        NightScene.StoryFor(round, out recap, out goal);
+        recapText.text = recap;
+        objectiveText.text = "<color=#c8171f>OBJECTIVE</color>   " + goal;
+    }
 
     void SetRound(int round)
     {

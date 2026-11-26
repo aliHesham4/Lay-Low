@@ -66,6 +66,9 @@ public class PlayerHUD : MonoBehaviour
     readonly List<string> carriedIds = new List<string>();
 
     public int ItemCount { get { return carried.Count; } }
+    // what is in the bag, in slot order (the pause menu's "Your bag" note reads these)
+    public System.Collections.Generic.IList<string> CarriedIds { get { return carriedIds.AsReadOnly(); } }
+    public System.Collections.Generic.IList<Sprite> CarriedIcons { get { return carried.AsReadOnly(); } }
 
     // Add any item (rock, feather, door lock...) with its own icon. Returns false when the bag is full.
     public bool AddItem(string id, Sprite icon)
@@ -76,6 +79,9 @@ public class PlayerHUD : MonoBehaviour
         carriedIds.Add(id);
         RefreshItems();
         popAt[carried.Count - 1] = Time.unscaledTime;
+        // the player's first pickup of each kind tells its story
+        Hider owner = GetComponent<Hider>();
+        if (owner != null && owner.isHumanControlled) ItemLore.FirstPickup(id);
         return true;
     }
 

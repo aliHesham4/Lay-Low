@@ -9,7 +9,19 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: 58f395ca2b45b3341a153c17918cd1dc
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
+    path: Assets/Scenes/Night 1.unity
+    guid: 72c8b71ff4457db429e618fdc9db3e8c
+  - enabled: 1
+    path: Assets/Scenes/Night 2.unity
+    guid: 838afb07fbcfa3d479cb23eb012cb6a9
+  - enabled: 1
+    path: Assets/Scenes/Night 3.unity
+    guid: 8bf6346ce24798443bd75ccd1652be96
+  - enabled: 1
+    path: Assets/Scenes/Night 4.unity
+    guid: f2a5da24fa33781488b4acc24188b9d6
+  - enabled: 1
+    path: Assets/Scenes/House.unity
     guid: 99c9720ab356a0642a771bea13969a05
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
