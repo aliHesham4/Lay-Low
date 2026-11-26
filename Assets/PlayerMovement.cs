@@ -43,8 +43,8 @@ public class PlayerMovement : MonoBehaviour
         bool jumpPressed = Keyboard.current.spaceKey.wasPressedThisFrame;
 
         // 2. Turning Rotation
-        if (rightPressed) transform.Rotate(Vector3.up, turnSpeed * speedMultiplier * Time.deltaTime, Space.World);
-        if (leftPressed) transform.Rotate(Vector3.up, -turnSpeed * speedMultiplier * Time.deltaTime, Space.World);
+        if (rightPressed) transform.Rotate(Vector3.up, turnSpeed * speedMultiplier * GameSettings.TurnFactor * Time.deltaTime, Space.World);
+        if (leftPressed) transform.Rotate(Vector3.up, -turnSpeed * speedMultiplier * GameSettings.TurnFactor * Time.deltaTime, Space.World);
 
         // 3. Forward / Backward Motion (Mesh Direction Inverted)
         float moveInput = 0f;

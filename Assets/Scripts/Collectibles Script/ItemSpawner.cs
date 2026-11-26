@@ -49,14 +49,7 @@ public class ItemSpawner : MonoBehaviour
 
     void Start()
     {
-        // blackout round: fewer items, some kinds left out
-        if (BlackoutRound.ThisRound)
-        {
-            itemsAtStart = BlackoutRound.Instance.itemsAtStart;
-            maxItemsOnMap = BlackoutRound.Instance.maxItemsOnMap;
-            if (collectiblePrefabs != null) collectiblePrefabs = System.Array.FindAll(collectiblePrefabs, p => !BlackoutRound.Excluded(p));
-            if (instantPrefabs != null) instantPrefabs = System.Array.FindAll(instantPrefabs, p => !BlackoutRound.Excluded(p));
-        }
+        // blackout round: same amount and kinds of items as every other round (they only glow a little, see AddGlow)
         // drop the starting items right away (each one still respects the limits and spacing)
         for (int i = 0; i < itemsAtStart; i++)
             if (CountCollectibles() + CountInstants() < maxItemsOnMap) SpawnRandomItem();

@@ -47,6 +47,8 @@ public class HeartbeatMonitor : MonoBehaviour
 
     [Header("HUD")]
     public Image heartIcon;
+    [Tooltip("Optional: the coloured part of the heart. When set, only it is tinted (outline, shadow and shine keep their colours).")]
+    public Image heartFill;
     public TMP_Text bpmText;
     public float pulseScale = 1.3f;
     public Color calmColor = new Color(0.85f, 0.25f, 0.25f, 1f);
@@ -187,7 +189,7 @@ public class HeartbeatMonitor : MonoBehaviour
     {
         if (heartIcon != null)
         {
-            heartIcon.color = col;
+            if (heartFill != null) heartFill.color = col; else heartIcon.color = col;
             float s = 1f + (pulseScale - 1f) * pulse;
             heartIcon.rectTransform.localScale = new Vector3(s, s, 1f);
         }

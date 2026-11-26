@@ -14,7 +14,8 @@ public static class PlayerColors
     {
         if (h == null) return Color.white;
         if (KnifeHolder.IsHolder(h)) return Gold;
-        string n = h.displayName ?? "";
+        // the seat comes from the player object (Player1..Player4): display names can be anything the players typed
+        string n = h.gameObject.name ?? "";
         if (n.EndsWith("1")) return P1;
         if (n.EndsWith("2")) return P2;
         if (n.EndsWith("3")) return P3;

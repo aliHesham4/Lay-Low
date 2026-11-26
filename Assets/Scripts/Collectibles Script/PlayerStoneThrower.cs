@@ -44,6 +44,7 @@ public class PlayerStoneThrower : MonoBehaviour
 
     void Update()
     {
+        if (PauseMenu.IsOpen) return; // the pause menu owns the mouse and keys
         if (!hasStone) { if (isTargeting) StopTargeting(); return; }
 
         // No throwing from inside a hiding spot
@@ -72,8 +73,8 @@ public class PlayerStoneThrower : MonoBehaviour
                 StopTargeting();
                 StartCoroutine(ThrowStoneRoutine(targetIndicator.transform.position));
             }
-            // T again, Esc or right click to cancel (the same keys as the other items)
-            else if (Mouse.current.rightButton.wasPressedThisFrame || Keyboard.current.escapeKey.wasPressedThisFrame || Keyboard.current.tKey.wasPressedThisFrame)
+            // T again or right click to cancel (the same keys as the other items)
+            else if (Mouse.current.rightButton.wasPressedThisFrame || Keyboard.current.tKey.wasPressedThisFrame)
             {
                 StopTargeting();
             }
@@ -94,7 +95,7 @@ public class PlayerStoneThrower : MonoBehaviour
         if (hint == null)
         {
             if (!on || playerHUD == null || playerHUD.bagIcon == null) return;
-            hint = PaperUI.Hint(playerHUD.bagIcon.canvas.rootCanvas.transform, "Click the floor to throw the rock", "T", "Esc");
+            hint = PaperUI.Hint(playerHUD.bagIcon.canvas.rootCanvas.transform, "Click the floor to throw the rock", "T");
         }
         hint.SetActive(on);
     }
@@ -179,7 +180,7 @@ public class PlayerStoneThrower : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("CollectibleStone"))
+        if (other.CompareTag("CollectibleStone") && !hasStone) // one rock at a time: a second one stays on the floor
         {
             CollectStone();
             Destroy(other.gameObject);

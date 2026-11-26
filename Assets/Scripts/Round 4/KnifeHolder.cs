@@ -205,6 +205,7 @@ foreach (Renderer r in g.GetComponentsInChildren<Renderer>(true))
 
     void Update()
     {
+        if (PauseMenu.IsOpen) return; // the pause menu owns the mouse and keys
         if (hider == null) return;
 
         // the card shimmers while he has the knife

@@ -304,6 +304,7 @@ public static class PaperUI
         foreach (string key in cancelKeys) KeyCap(row, key, true);
         Text(row, "Or", "or right-click to cancel", 15f, Hex("6e5f52"), false, TextAlignmentOptions.Left);
 
+        root.gameObject.AddComponent<PaperHintHover>(); // fades away while the mouse is over it, so it never blocks the aim
         root.gameObject.SetActive(false);
         return root.gameObject;
     }

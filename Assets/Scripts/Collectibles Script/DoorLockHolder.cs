@@ -60,6 +60,7 @@ public class DoorLockHolder : MonoBehaviour
 
     void Update()
     {
+        if (PauseMenu.IsOpen) return; // the pause menu owns the mouse and keys
         if (!has || hider == null || !hider.isHumanControlled) return;
         if (hider.IsCaught) { if (aiming) EndAim(); return; }
         if (Keyboard.current == null || Mouse.current == null) return;
@@ -71,7 +72,7 @@ public class DoorLockHolder : MonoBehaviour
             return;
         }
 
-        if (key || Keyboard.current.escapeKey.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame)
+        if (key || Mouse.current.rightButton.wasPressedThisFrame)
         {
             EndAim();
             return;
@@ -170,6 +171,6 @@ public class DoorLockHolder : MonoBehaviour
         r.sizeDelta = new Vector2(cursorSize, cursorSize);
         g.SetActive(false);
 
-        hint = PaperUI.Hint(canvas.transform, "Click a doorway to slam it shut", "E", "Esc");
+        hint = PaperUI.Hint(canvas.transform, "Click a doorway to slam it shut", "E");
     }
 }

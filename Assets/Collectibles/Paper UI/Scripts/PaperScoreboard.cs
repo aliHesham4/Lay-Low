@@ -255,11 +255,13 @@ public class PaperScoreboard : MonoBehaviour
         // the winner's polaroid (one per winner when it's a tie)
         int n = Mathf.Max(1, winners.Count);
         float scale = n == 1 ? 1f : n == 2 ? 0.72f : 0.56f;
+        List<RectTransform> pols = new List<RectTransform>();
         for (int i = 0; i < winners.Count; i++)
         {
             float x = n == 1 ? 120f : 40f + i * (360f / n);
             float y = n == 1 ? 170f : 190f + (i % 2) * 40f;
             RectTransform pol = Polaroid(root, winners[i], x, y, scale, (i % 2 == 0 ? -4f : 4f), totalRounds);
+            pols.Add(pol);
             Add(pol, 0.45f + i * 0.15f, 0.5f, Drop);
         }
 
@@ -267,6 +269,7 @@ public class PaperScoreboard : MonoBehaviour
         float w = 660f, h = 50f + standings.Count * 70f + 20f;
         RectTransform sheet = Sheet(root, 500f, 176f, w, h, 1f);
         Add(sheet, 0.35f, 0.45f, SlideUp);
+        foreach (RectTransform p in pols) p.SetAsLastSibling(); // the polaroids lie on top of the score sheet
         Header(sheet, "FINAL SCORES", "", 76f, 26f, 24f, w);
         // round numbers over the history cells
         float totX = w - 26f - 54f;

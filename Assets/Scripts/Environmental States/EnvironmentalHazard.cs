@@ -980,8 +980,22 @@ public class EnvironmentalHazard : MonoBehaviour
     Hider[] watched;
     float nextCheck;
 
+    [Header("Round end")]
+    [Tooltip("Seconds the hazard takes to die down once the round is over (effects, sounds, lights and darkness fade out).")]
+    public float endFadeTime = 1.5f;
+    bool ended;
+
     void Update()
     {
+        // the round is over: like the TV and the vacuum, the hazard switches off (here it dies down smoothly)
+        if (!ended && State != Phase.Idle && RoundManager.Instance != null && RoundManager.Instance.RoundOver)
+        {
+            ended = true;
+            StopAllCoroutines(); // no more alarms, ignitions, flames spreading or lightning
+            StartCoroutine(EndHazard());
+            return;
+        }
+        if (ended) return;
         if (!deadlyWhileActive || State != Phase.Sealed) return;
         // 10 checks a second is plenty, and the player list is looked up once instead of every frame
         if (Time.time < nextCheck) return;
@@ -995,6 +1009,60 @@ public class EnvironmentalHazard : MonoBehaviour
             if (victimEffectPrefab != null) { GameObject v = Instantiate(victimEffectPrefab, h.transform.position + Vector3.up * 1.2f, Quaternion.identity); Destroy(v, 4f); }
             KillHider(h);
         }
+    }
+
+    // Fade the hazard out at the end of the round. Runs on real time: the house freezes (time scale 0) a moment after the round ends.
+    IEnumerator EndHazard()
+    {
+        // effects stop emitting; the particles already in the air keep moving (on real time) and die out
+        foreach (ParticleSystem ps in GetComponentsInChildren<ParticleSystem>(true))
+        {
+            var main = ps.main;
+            main.useUnscaledTime = true;
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        }
+        foreach (GameObject c in clouds)
+            if (c != null)
+                foreach (ParticleSystem ps in c.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var main = ps.main;
+                    main.useUnscaledTime = true;
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                }
+
+        // what is fading
+        AudioSource[] sounds = GetComponentsInChildren<AudioSource>(true);
+        float[] vol = new float[sounds.Length];
+        for (int i = 0; i < sounds.Length; i++) if (sounds[i] != null) vol[i] = sounds[i].volume;
+        float[] lightFrom = new float[roomLights != null ? roomLights.Length : 0];
+        Color[] colFrom = new Color[lightFrom.Length];
+        for (int i = 0; i < lightFrom.Length; i++) if (roomLights[i] != null) { lightFrom[i] = roomLights[i].intensity; colFrom[i] = roomLights[i].color; }
+        Transform dark = transform.Find("RoomDarkness");
+        Material dm = dark != null ? dark.GetComponent<MeshRenderer>().sharedMaterial : null;
+        Color dFrom = dm != null && dm.HasProperty("_BaseColor") ? dm.GetColor("_BaseColor") : Color.clear;
+
+        float t = 0f, time = Mathf.Max(0.1f, endFadeTime);
+        while (t < time)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, t / time);
+            for (int i = 0; i < sounds.Length; i++) if (sounds[i] != null) sounds[i].volume = vol[i] * (1f - k);
+            for (int i = 0; i < lightFrom.Length; i++)
+            {
+                Light l = roomLights[i];
+                if (l == null) continue;
+                l.intensity = Mathf.Lerp(lightFrom[i], lightIntensities[i], k); // the room's lights come back as they were
+                l.color = Color.Lerp(colFrom[i], lightColors[i], k);
+            }
+            if (dm != null)
+            {
+                if (darkenFloorOnly) dm.SetColor("_BaseColor", Color.Lerp(dFrom, Color.white, k));
+                else { Color c = dFrom; c.a = dFrom.a * (1f - k); dm.SetColor("_BaseColor", c); }
+            }
+            yield return null;
+        }
+        foreach (AudioSource s in sounds) if (s != null) s.Stop();
+        if (dark != null) Destroy(dark.gameObject);
     }
 
     // a soft black volume fills the room and fades in: it looks charred / dark from every camera

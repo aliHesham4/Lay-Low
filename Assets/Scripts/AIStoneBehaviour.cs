@@ -132,6 +132,7 @@ public class AIStoneBehaviour : MonoBehaviour
 
     void PickUp(GameObject stone)
     {
+        if (hasStone) return; // one rock at a time
         if (stone != null) Destroy(stone);
         hasStone = true;
         thinkTimer = Random.Range(thinkTime.x, thinkTime.y);

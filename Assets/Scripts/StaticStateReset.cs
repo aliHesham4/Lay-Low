@@ -7,8 +7,11 @@ using UnityEngine;
 // The catch is that 'static' values would survive from your previous play session, so this puts every
 // static value the game relies on back to its starting state before the scene loads, exactly as a full
 // reload would. If you add a new 'static' field that holds game state, add it to the list below.
-static class StaticStateReset
+public static class StaticStateReset
 {
+    // the main menu calls this before a new match, so nothing from an abandoned match leaks into it
+    public static void ForNewMatch() { ResetAll(); }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetAll()
     {

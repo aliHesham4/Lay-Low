@@ -101,6 +101,7 @@ public class BlackoutRound : MonoBehaviour
     [Tooltip("Items with one of these components never spawn this round.")]
     public string[] excludedItems = { "FeatherCollectible" };
     public Color itemGlowColor = new Color(1f, 0.85f, 0.55f);
+    [Tooltip("Items' light in the dark (normal is about 4 brightness / 1.5 m reach).")]
     public float itemGlowIntensity = 0.8f;
     public float itemGlowRange = 1.5f;
 
@@ -144,6 +145,7 @@ public class BlackoutRound : MonoBehaviour
     public static void AddGlow(GameObject item)
     {
         if (instance == null || item == null) return;
+        // the item's own light is turned down in the dark: enough to see the item clearly, without lighting up the room
         Light[] own = item.GetComponentsInChildren<Light>(true);
         if (own.Length > 0)
         {
@@ -282,7 +284,7 @@ public class BlackoutRound : MonoBehaviour
                     {
                         l.flashUntil = now + Random.Range(flickerOnTime.x, flickerOnTime.y);
                         l.flashLevel = flickerMaxBrightness * Random.Range(0.6f, 1f);
-                        l.nextFlash = now + Random.Range(0.8f, 1.2f) / Mathf.Clamp(flickersPerSecond * (hunting ? huntFlickerBoost : 1f), 0.5f, 2.4f); // at least ~0.33 s apart
+                        l.nextFlash = now + Random.Range(0.8f, 1.2f) / Mathf.Clamp(flickersPerSecond * (hunting ? huntFlickerBoost : 1f) * (GameSettings.CalmFlicker ? 0.4f : 1f), 0.5f, 2.4f); // at least ~0.33 s apart
                     }
                     level = now < l.flashUntil ? l.flashLevel : 0.04f; // a faint glow between flickers
                     LastFlickerPos = l.light.transform.position; // fake-outs fool the AI players too

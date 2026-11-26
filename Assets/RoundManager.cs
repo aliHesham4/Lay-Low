@@ -48,11 +48,19 @@ public class RoundManager : MonoBehaviour
     bool loadingNext; // the blind is closing / the next round is loading
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void ResetMatch() { currentRound = 1; scores.Clear(); history.Clear(); matchStarted = false; }
+    public static void ResetMatch() { currentRound = 1; scores.Clear(); history.Clear(); matchStarted = false; }
 
     public static int CurrentRound { get { return currentRound; } }
     public float TimeLeft { get { return timeLeft; } }
     public bool RoundOver { get { return roundOver; } }
+    public bool IntroDone { get { return introDone; } }
+
+    // pause menu: play this round again from the elevator (nothing has been scored for it yet)
+    public void RestartRound()
+    {
+        if (roundOver || loadingNext) return;
+        LoadNextBehindBlind();
+    }
 
     float timeLeft;
     bool roundOver;
@@ -154,6 +162,7 @@ public class RoundManager : MonoBehaviour
     {
         if (roundOver) return;
         roundOver = true;
+        StartCoroutine(SilenceAppliances());
 
         // scores, each player's result this round, and the scoreboard rows
         List<ScoreLine> lines = new List<ScoreLine>();
@@ -177,6 +186,32 @@ public class RoundManager : MonoBehaviour
         else PaperScoreboard.ShowRound(currentRound, totalRounds, reason, false, null, lines);
         freezeAt = Time.unscaledTime + freezeAfterEnd;
         nextAt = Time.unscaledTime + resultsSeconds;
+    }
+
+    // Round over: anything still running in the house (TV, vacuum, piano...) fades out and switches off,
+    // on real time because the house freezes a moment later.
+    System.Collections.IEnumerator SilenceAppliances(float seconds = 1.5f)
+    {
+        var running = new List<MonoBehaviour>();
+        foreach (MonoBehaviour mb in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+        {
+            System.Type tp = mb.GetType();
+            var isOn = tp.GetProperty("IsOn");
+            var off = tp.GetMethod("TurnOff", System.Type.EmptyTypes);
+            if (isOn == null || off == null || isOn.PropertyType != typeof(bool)) continue;
+            if ((bool)isOn.GetValue(mb, null)) running.Add(mb);
+        }
+        if (running.Count == 0) yield break;
+        var sources = new List<AudioSource>(); var vols = new List<float>();
+        foreach (MonoBehaviour mb in running)
+            foreach (AudioSource s in mb.GetComponentsInChildren<AudioSource>()) { sources.Add(s); vols.Add(s.volume); }
+        for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
+        {
+            for (int i = 0; i < sources.Count; i++) if (sources[i] != null) sources[i].volume = vols[i] * (1f - t / seconds);
+            yield return null;
+        }
+        foreach (MonoBehaviour mb in running) if (mb != null) mb.GetType().GetMethod("TurnOff", System.Type.EmptyTypes).Invoke(mb, null);
+        for (int i = 0; i < sources.Count; i++) if (sources[i] != null) { sources[i].Stop(); sources[i].volume = vols[i]; }
     }
 
     // one player's row on the scoreboard

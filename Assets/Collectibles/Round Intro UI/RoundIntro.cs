@@ -207,12 +207,12 @@ public class RoundIntro : MonoBehaviour
             float bs = Eval(p, Bezier(.5f, 0f, .75f, 0f), 0, 2.6f, 46, 2.6f, 50, .94f, 53, 1, 100, 1);
             bannerRT.localScale = new Vector3(bs, bs, 1f);
             bannerGroup.alpha = Eval(p, Bezier(.5f, 0f, .75f, 0f), 0, 0, 46, 0, 50, 1, 53, 1, 100, 1);
-            float bright = Eval(p, Linear, 0, 1, 56, 1, 56.6f, .25f, 57.2f, 1, 58, .4f, 58.6f, 1, 61, 1, 61.6f, .15f, 62.2f, 1, 63, .5f, 63.5f, 1, 68.9f, 1, 69, 0, 93, 0, 97, 1, 100, 1);
+            float bright = Eval(p, Linear, 0, 1, 56, 1, 56.6f, .25f, 57.2f, 1, 58, .4f, 58.6f, 1, 61, 1, 61.6f, .15f, 62.2f, 1, 63, .5f, 63.5f, 1, 68.9f, 1, 69, 0, 100, 0); // stays dark to the end: the lit card never comes back
             blackout.color = new Color(0f, 0f, 0f, 1f - bright);
             bulbGlowImg.color = new Color(1f, 1f, 1f, Eval(p, Linear, 0, 1, 56, 1, 56.6f, .1f, 57.2f, 1, 58, .2f, 58.6f, 1, 61, 1, 61.6f, .05f, 62.2f, 1, 63, .3f, 63.5f, 1, 68.9f, 1, 69, 0, 100, 0));
-            float dark = Eval(p, Linear, 0, 0, 56, 0, 56.6f, .8f, 57.2f, 0, 58, .6f, 58.6f, 0, 61, 0, 61.6f, .85f, 62.2f, 0, 63, .5f, 63.5f, 0, 68.9f, 0, 69, 1, 93, 1, 97, 0, 100, 0);
+            float dark = Eval(p, Linear, 0, 0, 56, 0, 56.6f, .8f, 57.2f, 0, 58, .6f, 58.6f, 0, 61, 0, 61.6f, .85f, 62.2f, 0, 63, .5f, 63.5f, 0, 68.9f, 0, 69, 1, 100, 1);
             bulbGlassImg.color = Color.Lerp(Color.white, Color.black, dark);
-            neonGroup.alpha = (p >= 69f && p < 93f) ? 1f : 0f; // snaps on with the lights out
+            neonGroup.alpha = p >= 69f ? Eval(p, Linear, 0, 1, 94, 1, 100, 0) : 0f; // snaps on with the lights out, then fades out with the card
         }
         else if (round == 4)
         {

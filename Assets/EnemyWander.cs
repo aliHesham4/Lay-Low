@@ -11,6 +11,7 @@ public class EnemyWander : MonoBehaviour
     private float timer;
     private EnemyVision vision;
     private float stuckTime;
+    private float nearStall;
     private NavMeshObstacle[] obstacles;
 
 
@@ -93,13 +94,22 @@ public class EnemyWander : MonoBehaviour
         }
 
         // Check if agent reached destination
-        if (!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+        // arrived: right on the spot, or as close as furniture lets him get (avoidance holds him ~0.2-0.3 m off a bathtub, a table...)
+        bool closeEnough = !agent.pathPending && agent.remainingDistance <= agent.stoppingDistance + 0.35f;
+        if (!closeEnough && !agent.pathPending && agent.hasPath && agent.remainingDistance <= 0.8f && agent.velocity.sqrMagnitude < 0.0025f)
+        {
+            nearStall += Time.deltaTime;
+            closeEnough = nearStall > 0.5f; // standing still right next to the goal: that's as close as it gets
+        }
+        else nearStall = 0f;
+        if (closeEnough)
         {
             timer += Time.deltaTime;
             if (timer >= waitTime)
             {
                 SetNewDestination();
                 timer = 0f;
+                nearStall = 0f;
             }
         }
     }

@@ -173,6 +173,9 @@ public class PlayerHUD : MonoBehaviour
     // left-to-right place of this player's card (0..3)
     int Slot()
     {
+        // Player1..Player4 always sit in their own place, even when a seat is left empty in Game setup
+        string n = gameObject.name;
+        if (n.Length > 6 && n.StartsWith("Player") && char.IsDigit(n[n.Length - 1])) return Mathf.Clamp(n[n.Length - 1] - '1', 0, 3);
         int slot = 0;
         foreach (PlayerHUD h in FindObjectsByType<PlayerHUD>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             if (h != this && (h.oldOrder < oldOrder || (h.oldOrder == oldOrder && h.GetInstanceID() < GetInstanceID()))) slot++;

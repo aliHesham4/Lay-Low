@@ -57,6 +57,7 @@ public class FeatherHolder : MonoBehaviour
 
     void Update()
     {
+        if (PauseMenu.IsOpen) return; // the pause menu owns the mouse and keys
         if (!has || hider == null || !hider.isHumanControlled) return;
 
         if (hider.IsCaught) { if (aiming) EndAim(); return; }
@@ -71,7 +72,7 @@ public class FeatherHolder : MonoBehaviour
         }
 
         // ---- aiming ----
-        if (keyPressed || Keyboard.current.escapeKey.wasPressedThisFrame || Mouse.current.rightButton.wasPressedThisFrame)
+        if (keyPressed || Mouse.current.rightButton.wasPressedThisFrame)
         {
             EndAim();
             return;
@@ -190,6 +191,6 @@ public class FeatherHolder : MonoBehaviour
         r.sizeDelta = new Vector2(cursorSize, cursorSize);
         g.SetActive(false);
 
-        hint = PaperUI.Hint(canvas.transform, "Click a player's card to tickle them", "F", "Esc");
+        hint = PaperUI.Hint(canvas.transform, "Click a player's card to tickle them", "F");
     }
 }

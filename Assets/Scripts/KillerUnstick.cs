@@ -17,7 +17,10 @@ public class KillerUnstick : MonoBehaviour
     public float minProgress = 0.15f;
     [Tooltip("Ignore it when he is this close to where he is going.")]
     public float minRemaining = 0.9f;
+    [Tooltip("Seconds standing still right next to the goal before it counts as arrived.")]
+    public float nearStallSeconds = 1f;
     public bool logRecoveries = false;
+    float nearStall;
 
     NavMeshAgent agent;
     EnemyWander wander;
@@ -51,6 +54,17 @@ public class KillerUnstick : MonoBehaviour
             return;
         }
         offMeshSince = -1f;
+
+        // right next to the goal but held back (furniture without a navmesh hole, another agent...): count it as arrived
+        if (!agent.isStopped && !agent.pathPending && agent.hasPath && agent.speed > 0.1f
+            && agent.remainingDistance > agent.stoppingDistance + 0.05f && agent.remainingDistance <= minRemaining
+            && agent.velocity.sqrMagnitude < 0.0025f)
+        {
+            nearStall += 0.2f;
+            if (nearStall >= nearStallSeconds) { nearStall = 0f; agent.ResetPath(); Log("arrived (blocked next to goal)"); Reset(); }
+            return;
+        }
+        nearStall = 0f;
 
         bool wantsToMove = !agent.isStopped && !agent.pathPending && agent.hasPath
             && agent.pathStatus == NavMeshPathStatus.PathComplete
